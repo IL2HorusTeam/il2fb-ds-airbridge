@@ -1,0 +1,1 @@
+il2fb-ds-middleware>=1.0,<1.1
