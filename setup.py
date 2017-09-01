@@ -101,4 +101,9 @@ setup(
             'tag_build': BUILD_TAG,
         },
     },
+    entry_points={
+        'console_scripts': [
+            'il2fb-ds-airbridge=il2fb.ds.airbridge.run:main',
+        ],
+    }
 )
