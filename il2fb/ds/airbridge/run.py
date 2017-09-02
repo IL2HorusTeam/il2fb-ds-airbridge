@@ -1,10 +1,15 @@
 # coding: utf-8
 
 import argparse
+import logging
 
 from pathlib import Path
 
 from .config import load_config
+from .logging import setup_logging
+
+
+LOG = logging.getLogger(__name__)
 
 
 def load_args():
@@ -28,3 +33,5 @@ def load_args():
 def main():
     args = load_args()
     config = load_config(args.config_path)
+
+    setup_logging(config.logging)

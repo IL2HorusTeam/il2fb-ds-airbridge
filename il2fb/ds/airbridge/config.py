@@ -3,6 +3,7 @@
 import dictlib
 import yaml
 
+from ddict import DotAccessDict
 from jsonschema import validate
 
 
@@ -22,11 +23,68 @@ CONFIG_SCHEMA = {
                     'type': 'string',
                 },
             },
-            'required': [
-                'exe_path',
-                'config_path',
-                'start_script_path',
-            ],
+            'required': ['exe_path', ],
+        },
+        'logging': {
+            'type': 'object',
+            'properties': {
+                'files': {
+                    'type': 'object',
+                    'properties': {
+                        'main': {
+                            'type': 'object',
+                            'properties': {
+                                'file_path': {
+                                    'type': 'string',
+                                },
+                                'keep_after_restart': {
+                                    'type': 'boolean',
+                                },
+                                'is_delayed': {
+                                    'type': 'boolean',
+                                },
+                                'level': {
+                                    'type': 'string',
+                                },
+                            },
+                        },
+                        'exceptions': {
+                            'type': 'object',
+                            'properties': {
+                                'file_path': {
+                                    'type': 'string',
+                                },
+                                'keep_after_restart': {
+                                    'type': 'boolean',
+                                },
+                                'is_delayed': {
+                                    'type': 'boolean',
+                                },
+                            },
+                        },
+                        'rotation': {
+                            'type': 'object',
+                            'properties': {
+                                'is_enabled': {
+                                    'type': 'boolean',
+                                },
+                                'max_size': {
+                                    'type': 'integer',
+                                },
+                                'max_backups': {
+                                    'type': 'integer',
+                                },
+                            },
+                        },
+                        'encoding': {
+                            'type': 'string',
+                        },
+                        'use_local_time': {
+                            'type': 'boolean',
+                        },
+                    },
+                },
+            },
         },
     },
     'required': ['ds', ],
@@ -34,18 +92,36 @@ CONFIG_SCHEMA = {
 
 
 CONFIG_DEFAULTS = {
-    'ds': {
-        'config_path': 'confs.ini',
-        'start_script_path': 'server.cmd',
-    }
+    'logging': {
+        'files': {
+            'main': {
+                'file_path': 'airbridge.log',
+                'keep_after_restart': True,
+                'is_delayed': False,
+                'level': 'info',
+            },
+            'exceptions': {
+                'file_path': 'airbridge.exc',
+                'keep_after_restart': True,
+                'is_delayed': False,
+            },
+            'rotation': {
+                'is_enabled': True,
+                'max_size': 10 * (2 ** 20),  # 10 MiB
+                'max_backups': 10,
+            },
+            'encoding': 'utf8',
+            'use_local_time': False,
+        },
+    },
 }
 
 
-def load_config(path: str) -> dict:
+def load_config(path: str) -> DotAccessDict:
     with open(path, 'r') as f:
-        custom = yaml.load(f.read())
+        config = yaml.load(f.read())
 
-    config = dictlib.union(CONFIG_DEFAULTS, custom)
+    config = dictlib.union(CONFIG_DEFAULTS, config)
     validate(config, CONFIG_SCHEMA)
 
-    return config
+    return DotAccessDict(config)
