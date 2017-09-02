@@ -103,7 +103,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'il2fb-ds-airbridge=il2fb.ds.airbridge.run:main',
+            'il2fb-ds-airbridge=il2fb.ds.airbridge.main:main',
         ],
     }
 )
