@@ -1,11 +1,16 @@
 # coding: utf-8
 
 import argparse
+import asyncio
+import functools
 import logging
+import platform
+import sys
 
 from pathlib import Path
 
 from .config import load_config
+from .dedicated_server import DedicatedServer
 from .logging import setup_logging
 
 
@@ -30,8 +35,49 @@ def load_args():
     return parser.parse_args()
 
 
+def on_dedicated_server_stdout(s: str) -> None:
+    sys.stdout.write(s)
+    sys.stdout.flush()
+
+
+def on_stdin_ready(handler):
+    line = sys.stdin.readline()
+    asyncio.ensure_future(handler(line))
+
+
+def get_loop():
+    if platform.system() == 'Windows':
+        return asyncio.ProactorEventLoop()
+
+    return asyncio.SelectorEventLoop()
+
+
 def main():
     args = load_args()
     config = load_config(args.config_path)
 
     setup_logging(config.logging)
+
+    loop = get_loop()
+    asyncio.set_event_loop(loop)
+
+    try:
+        ds = DedicatedServer(
+            loop=loop,
+            exe_path=config.ds.exe_path,
+            config_path=config.ds.get('config_path'),
+            start_script_path=config.ds.get('start_script_path'),
+            stdout_handler=on_dedicated_server_stdout,
+        )
+    except Exception:
+        LOG.fatal("failed to init dedicated server", exc_info=True)
+        raise SystemExit(-1)
+
+    ds_task = loop.create_task(ds.run())
+    loop.run_until_complete(ds.wait_for_start())
+    loop.add_reader(sys.stdin, functools.partial(on_stdin_ready, ds.input))
+
+    try:
+        loop.run_until_complete(asyncio.gather(ds_task))
+    except KeyboardInterrupt:
+        LOG.info("interrupted by user")

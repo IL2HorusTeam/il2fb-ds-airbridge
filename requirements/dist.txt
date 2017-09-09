@@ -4,3 +4,4 @@ jsonschema==2.6.0
 PyYAML==3.12
 
 il2fb-ds-middleware>=1.0,<1.1
+il2fb-ds-config>=1.0,<1.1
