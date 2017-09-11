@@ -35,6 +35,13 @@ def load_args():
     return parser.parse_args()
 
 
+def get_loop():
+    if platform.system() == 'Windows':
+        return asyncio.ProactorEventLoop()
+
+    return asyncio.SelectorEventLoop()
+
+
 def on_dedicated_server_stdout(s: str) -> None:
     sys.stdout.write(s)
     sys.stdout.flush()
@@ -45,11 +52,18 @@ def on_stdin_ready(handler):
     asyncio.ensure_future(handler(line))
 
 
-def get_loop():
-    if platform.system() == 'Windows':
-        return asyncio.ProactorEventLoop()
+def validate_dedicated_server_config(config) -> None:
+    if not config.console.connection.port:
+        raise ValueError(
+            "server's console is disabled, please configure it to proceed "
+            "(see: https://github.com/IL2HorusTeam/il2fb-ds-config#console-section)"
+        )
 
-    return asyncio.SelectorEventLoop()
+    if not config.device_link.connection.port:
+        raise ValueError(
+            "server's device link is disabled, please configure it to proceed "
+            "(see: https://github.com/IL2HorusTeam/il2fb-ds-config#devicelink-section)"
+        )
 
 
 def main():
@@ -71,6 +85,12 @@ def main():
         )
     except Exception:
         LOG.fatal("failed to init dedicated server", exc_info=True)
+        raise SystemExit(-1)
+
+    try:
+        validate_dedicated_server_config(ds.config)
+    except ValueError:
+        LOG.fatal("server's config is invalid", exc_info=True)
         raise SystemExit(-1)
 
     ds_task = loop.create_task(ds.run())
