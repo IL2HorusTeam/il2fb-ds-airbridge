@@ -89,8 +89,8 @@ def main():
 
     try:
         validate_dedicated_server_config(ds.config)
-    except ValueError:
-        LOG.fatal("server's config is invalid", exc_info=True)
+    except ValueError as e:
+        LOG.fatal(e)
         raise SystemExit(-1)
 
     ds_task = loop.create_task(ds.run())
