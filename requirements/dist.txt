@@ -1,6 +1,7 @@
 ddict==0.1.3
 dictlib==1.0
 jsonschema==2.6.0
+psutil==5.3.1
 PyYAML==3.12
 
 il2fb-ds-middleware>=1.0,<1.1

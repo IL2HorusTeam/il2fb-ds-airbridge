@@ -86,8 +86,11 @@ CONFIG_SCHEMA = {
                 },
             },
         },
+        'wine_bin_path': {
+            'type': 'string',
+        },
     },
-    'required': ['ds', ],
+    'required': ['ds', 'wine_bin_path', ],
 }
 
 
@@ -114,6 +117,7 @@ CONFIG_DEFAULTS = {
             'use_local_time': False,
         },
     },
+    'wine_bin_path': 'wine',
 }
 
 

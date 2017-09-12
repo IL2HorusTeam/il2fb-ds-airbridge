@@ -9,6 +9,8 @@ import sys
 
 from pathlib import Path
 
+import psutil
+
 from .config import load_config
 from .dedicated_server import DedicatedServer
 from .logging import setup_logging
@@ -42,14 +44,39 @@ def get_loop():
     return asyncio.SelectorEventLoop()
 
 
-def on_dedicated_server_stdout(s: str) -> None:
-    sys.stdout.write(s)
-    sys.stdout.flush()
+def write_string_to_stream(stream, s: str) -> None:
+    stream.write(s)
+    stream.flush()
 
 
-def on_stdin_ready(handler):
-    line = sys.stdin.readline()
-    asyncio.ensure_future(handler(line))
+def handle_string_from_stream(stream, handler) -> None:
+    line = stream.readline()
+
+    try:
+        asyncio.ensure_future(handler(line))
+    except Exception as e:
+        LOG.error(
+            f"failed to send user input to dedicated server "
+            f"(input={repr(s)}, reason='{e}')"
+        )
+
+
+def get_dedicated_server(loop, config) -> DedicatedServer:
+    config_path = config.ds.get('config_path')
+    start_script_path = config.ds.get('start_script_path')
+
+    stdout_writer = functools.partial(write_string_to_stream, sys.stdout)
+    stderr_writer = functools.partial(write_string_to_stream, sys.stderr)
+
+    return DedicatedServer(
+        loop=loop,
+        exe_path=config.ds.exe_path,
+        config_path=config_path,
+        start_script_path=start_script_path,
+        wine_bin_path=config.wine_bin_path,
+        stdout_handler=stdout_writer,
+        stderr_handler=stderr_writer,
+    )
 
 
 def validate_dedicated_server_config(config) -> None:
@@ -66,6 +93,31 @@ def validate_dedicated_server_config(config) -> None:
         )
 
 
+async def wait_for_dedicated_server_ports(
+    loop, pid, config, timeout=30,
+) -> None:
+    process = psutil.Process(pid)
+    expected_ports = {
+        config.connection.port,
+        config.console.connection.port,
+        config.device_link.connection.port,
+    }
+
+    while timeout > 0:
+        start_time = loop.time()
+
+        actual_ports = {c.laddr.port for c in process.connections('inet')}
+        if actual_ports == expected_ports:
+            return
+
+        delay = min(timeout, 1)
+        asyncio.sleep(delay, loop=loop)
+        time_delta = start_time - loop.time()
+        timeout = max(0, timeout - time_delta)
+
+    raise RuntimeError("expected ports of dedicated server are closed")
+
+
 def main():
     args = load_args()
     config = load_config(args.config_path)
@@ -76,13 +128,7 @@ def main():
     asyncio.set_event_loop(loop)
 
     try:
-        ds = DedicatedServer(
-            loop=loop,
-            exe_path=config.ds.exe_path,
-            config_path=config.ds.get('config_path'),
-            start_script_path=config.ds.get('start_script_path'),
-            stdout_handler=on_dedicated_server_stdout,
-        )
+        ds = get_dedicated_server(loop, config)
     except Exception:
         LOG.fatal("failed to init dedicated server", exc_info=True)
         raise SystemExit(-1)
@@ -94,10 +140,29 @@ def main():
         raise SystemExit(-1)
 
     ds_task = loop.create_task(ds.run())
-    loop.run_until_complete(ds.wait_for_start())
-    loop.add_reader(sys.stdin, functools.partial(on_stdin_ready, ds.input))
+
+    try:
+        loop.run_until_complete(ds.wait_for_start())
+    except Exception:
+        ds_task.cancel()
+        LOG.fatal("failed to start dedicated server", exc_info=True)
+        raise SystemExit(-1)
+
+    try:
+        future = wait_for_dedicated_server_ports(loop, ds.pid, ds.config)
+        loop.run_until_complete(future)
+    except Exception as e:
+        ds_task.cancel()
+        LOG.fatal(e)
+        raise SystemExit(-1)
+
+    reader = functools.partial(handle_string_from_stream, sys.stdin, ds.input)
+    loop.add_reader(sys.stdin, reader)
 
     try:
         loop.run_until_complete(asyncio.gather(ds_task))
     except KeyboardInterrupt:
         LOG.info("interrupted by user")
+    except Exception:
+        LOG.fatal("fatal error has occured", exc_info=True)
+        raise SystemExit(-1)
