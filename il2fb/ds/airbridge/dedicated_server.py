@@ -203,7 +203,8 @@ class DedicatedServer:
         wine_bin_path: str="wine",
         stdout_handler=None,
         stderr_handler=None,
-        prompt_handler=None,
+        passive_prompt_handler=None,
+        active_prompt_handler=None,
     ):
         self._loop = loop
         self.exe_path = _try_to_normalize_exe_path(exe_path)
@@ -228,9 +229,14 @@ class DedicatedServer:
             if stderr_handler
             else None
         )
-        self._prompt_handler = (
-            functools.partial(_try_to_handle_string, prompt_handler)
-            if prompt_handler
+        self._passive_prompt_handler = (
+            functools.partial(_try_to_handle_string, passive_prompt_handler)
+            if passive_prompt_handler
+            else None
+        )
+        self._active_prompt_handler = (
+            functools.partial(_try_to_handle_string, active_prompt_handler)
+            if active_prompt_handler
             else None
         )
         self._process = None
@@ -282,6 +288,7 @@ class DedicatedServer:
             input_line=input_line,
             stop_line=stop_line,
             output_handler=self._stdout_handler,
+            prompt_handler=self._passive_prompt_handler,
         ))
 
         await self.input(input_line)
@@ -292,7 +299,7 @@ class DedicatedServer:
                 stream=self._process.stdout,
                 stream_name="STDOUT",
                 output_handler=self._stdout_handler,
-                prompt_handler=self._prompt_handler,
+                prompt_handler=self._active_prompt_handler,
             ))
             tasks.append(stream_task)
         else:

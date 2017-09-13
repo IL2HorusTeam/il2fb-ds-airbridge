@@ -14,6 +14,8 @@ from threading import Thread
 
 import psutil
 
+from colorama import init as init_colors, Fore, Style
+
 from .config import load_config
 from .dedicated_server import DedicatedServer
 from .logging import setup_logging
@@ -47,21 +49,28 @@ def get_loop():
     return asyncio.SelectorEventLoop()
 
 
+def colorize_prompt(s: str) -> str:
+    return f"{Fore.GREEN}{s}{Style.RESET_ALL}"
+
+
+def colorize_error(s: str) -> str:
+    return f"{Fore.RED}{s}{Style.RESET_ALL}"
+
+
 def write_string_to_stream(stream, s: str) -> None:
     stream.write(s)
     stream.flush()
 
 
 def read_input(loop, prompt_getter, input_handler):
-    readline.clear_history()
     while True:
         prompt = prompt_getter()
 
         if prompt is None:
             return
 
-        line = input(prompt)
-        future = input_handler(line + '\n')
+        line = input(colorize_prompt(prompt))
+        future = input_handler(f"{line}\n")
         asyncio.run_coroutine_threadsafe(future, loop)
 
         if line == 'exit':
@@ -82,8 +91,9 @@ def get_dedicated_server(loop, config, prompt_handler) -> DedicatedServer:
         start_script_path=start_script_path,
         wine_bin_path=config.wine_bin_path,
         stdout_handler=stdout_writer,
-        stderr_handler=stderr_writer,
-        prompt_handler=prompt_handler,
+        stderr_handler=lambda s: stderr_writer(colorize_error(s)),
+        passive_prompt_handler=lambda s: stdout_writer(colorize_prompt(s)),
+        active_prompt_handler=prompt_handler,
     )
 
 
@@ -127,6 +137,9 @@ async def wait_for_dedicated_server_ports(
 
 
 def main():
+    readline.clear_history()
+    init_colors()
+
     args = load_args()
     config = load_config(args.config_path)
 
