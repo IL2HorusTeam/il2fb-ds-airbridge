@@ -93,11 +93,11 @@ def _try_to_load_config(path: str) -> ServerConfig:
     return ServerConfig.from_ini(ini)
 
 
-def _try_to_handle_stream(handler, s: str) -> None:
+def _try_to_handle_string(handler, s: str) -> None:
     try:
         handler(s)
     except Exception:
-        LOG.exception(f"failed to handle dedicated server's stream '{s}'")
+        LOG.exception(f"failed to handle dedicated server's string '{s}'")
 
 
 def _is_eol(char: str) -> bool:
@@ -117,8 +117,10 @@ def _is_prompt(char: str, chars: List[str]) -> bool:
 
 
 async def _read_stream_until_line(
-    stream, stream_name, input_line, stop_line, handler=None,
+    stream, stream_name, input_line, stop_line, output_handler=None,
+    prompt_handler=None,
 ) -> Awaitable:
+
     chars = []
 
     while True:
@@ -131,13 +133,19 @@ async def _read_stream_until_line(
             )
 
         char = char.decode()
-        do_flush = (_is_eol(char) or _is_prompt(char, chars))
+        is_eol = _is_eol(char)
+        is_prompt = (not is_eol) and _is_prompt(char, chars)
         chars.append(char)
 
-        if not do_flush:
+        if not (is_eol or is_prompt):
             continue
 
         s, chars = ''.join(chars), []
+        handler = (
+            output_handler
+            if is_eol
+            else prompt_handler or output_handler
+        )
 
         if s == stop_line:
             if handler:
@@ -149,7 +157,10 @@ async def _read_stream_until_line(
             handler(s)
 
 
-async def _read_stream(stream, stream_name, handler) -> Awaitable:
+async def _read_stream_until_end(
+    stream, stream_name, output_handler, prompt_handler=None,
+) -> Awaitable:
+
     chars = []
 
     while True:
@@ -160,18 +171,25 @@ async def _read_stream(stream, stream_name, handler) -> Awaitable:
             break
 
         char = char.decode()
-        do_flush = (_is_eol(char) or _is_prompt(char, chars))
+        is_eol = _is_eol(char)
+        is_prompt = (not is_eol) and _is_prompt(char, chars)
         chars.append(char)
 
-        if not do_flush:
+        if not (is_eol or is_prompt):
             continue
 
         s, chars = ''.join(chars), []
+        handler = (
+            output_handler
+            if is_eol
+            else prompt_handler or output_handler
+        )
+
         handler(s)
 
     if chars:
         s, chars = ''.join(chars), []
-        handler(s)
+        output_handler(s)
 
 
 class DedicatedServer:
@@ -185,6 +203,7 @@ class DedicatedServer:
         wine_bin_path: str="wine",
         stdout_handler=None,
         stderr_handler=None,
+        prompt_handler=None,
     ):
         self._loop = loop
         self.exe_path = _try_to_normalize_exe_path(exe_path)
@@ -200,13 +219,18 @@ class DedicatedServer:
         )
         self._wine_bin_path = wine_bin_path
         self._stdout_handler = (
-            functools.partial(_try_to_handle_stream, stdout_handler)
+            functools.partial(_try_to_handle_string, stdout_handler)
             if stdout_handler
             else None
         )
         self._stderr_handler = (
-            functools.partial(_try_to_handle_stream, stderr_handler)
+            functools.partial(_try_to_handle_string, stderr_handler)
             if stderr_handler
+            else None
+        )
+        self._prompt_handler = (
+            functools.partial(_try_to_handle_string, prompt_handler)
+            if prompt_handler
             else None
         )
         self._process = None
@@ -240,10 +264,10 @@ class DedicatedServer:
         await self._spawn_process()
 
         if self._stderr_handler:
-            stream_task = self._loop.create_task(_read_stream(
+            stream_task = self._loop.create_task(_read_stream_until_end(
                 stream=self._process.stderr,
                 stream_name="STDERR",
-                handler=self._stderr_handler,
+                output_handler=self._stderr_handler,
             ))
             tasks.append(stream_task)
         else:
@@ -257,17 +281,18 @@ class DedicatedServer:
             stream_name="STDOUT",
             input_line=input_line,
             stop_line=stop_line,
-            handler=self._stdout_handler,
+            output_handler=self._stdout_handler,
         ))
 
         await self.input(input_line)
         await boot_task
 
         if self._stdout_handler:
-            stream_task = self._loop.create_task(_read_stream(
+            stream_task = self._loop.create_task(_read_stream_until_end(
                 stream=self._process.stdout,
                 stream_name="STDOUT",
-                handler=self._stdout_handler,
+                output_handler=self._stdout_handler,
+                prompt_handler=self._prompt_handler,
             ))
             tasks.append(stream_task)
         else:

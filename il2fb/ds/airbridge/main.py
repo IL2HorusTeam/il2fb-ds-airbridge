@@ -5,9 +5,12 @@ import asyncio
 import functools
 import logging
 import platform
+import queue
+import readline
 import sys
 
 from pathlib import Path
+from threading import Thread
 
 import psutil
 
@@ -49,19 +52,23 @@ def write_string_to_stream(stream, s: str) -> None:
     stream.flush()
 
 
-def handle_string_from_stream(stream, handler) -> None:
-    line = stream.readline()
+def read_input(loop, prompt_getter, input_handler):
+    readline.clear_history()
+    while True:
+        prompt = prompt_getter()
 
-    try:
-        asyncio.ensure_future(handler(line))
-    except Exception as e:
-        LOG.error(
-            f"failed to send user input to dedicated server "
-            f"(input={repr(s)}, reason='{e}')"
-        )
+        if prompt is None:
+            return
+
+        line = input(prompt)
+        future = input_handler(line + '\n')
+        asyncio.run_coroutine_threadsafe(future, loop)
+
+        if line == 'exit':
+            return
 
 
-def get_dedicated_server(loop, config) -> DedicatedServer:
+def get_dedicated_server(loop, config, prompt_handler) -> DedicatedServer:
     config_path = config.ds.get('config_path')
     start_script_path = config.ds.get('start_script_path')
 
@@ -76,6 +83,7 @@ def get_dedicated_server(loop, config) -> DedicatedServer:
         wine_bin_path=config.wine_bin_path,
         stdout_handler=stdout_writer,
         stderr_handler=stderr_writer,
+        prompt_handler=prompt_handler,
     )
 
 
@@ -126,9 +134,10 @@ def main():
 
     loop = get_loop()
     asyncio.set_event_loop(loop)
+    prompt_queue = queue.Queue()
 
     try:
-        ds = get_dedicated_server(loop, config)
+        ds = get_dedicated_server(loop, config, prompt_queue.put_nowait)
     except Exception:
         LOG.fatal("failed to init dedicated server", exc_info=True)
         raise SystemExit(-1)
@@ -156,8 +165,12 @@ def main():
         LOG.fatal(e)
         raise SystemExit(-1)
 
-    reader = functools.partial(handle_string_from_stream, sys.stdin, ds.input)
-    loop.add_reader(sys.stdin, reader)
+    input_thread = Thread(
+        target=read_input,
+        args=(loop, prompt_queue.get, ds.input),
+        daemon=True,
+    )
+    input_thread.start()
 
     try:
         loop.run_until_complete(asyncio.gather(ds_task))
