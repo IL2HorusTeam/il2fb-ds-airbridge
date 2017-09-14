@@ -62,22 +62,34 @@ def write_string_to_stream(stream, s: str) -> None:
     stream.flush()
 
 
-def read_input(loop, prompt_getter, input_handler):
+def read_input(prompt_getter, input_handler):
     while True:
         prompt = prompt_getter()
 
         if prompt is None:
             return
 
-        line = input(colorize_prompt(prompt))
-        future = input_handler(f"{line}\n")
-        asyncio.run_coroutine_threadsafe(future, loop)
+        user_input = input(colorize_prompt(prompt))
+        line = user_input + '\n'
+
+        try:
+            input_handler(line)
+        except Exception:
+            LOG.exception(f"failed to handle input line '{line}'")
 
         if line == 'exit':
             return
 
 
-def get_dedicated_server(loop, config, prompt_handler) -> DedicatedServer:
+def make_thread_safe_input_handler(loop, input_handler):
+
+    def thread_safe_handler(s: str) -> None:
+        asyncio.run_coroutine_threadsafe(input_handler(s), loop)
+
+    return thread_safe_handler
+
+
+def make_dedicated_server(loop, config, prompt_handler) -> DedicatedServer:
     config_path = config.ds.get('config_path')
     start_script_path = config.ds.get('start_script_path')
 
@@ -150,7 +162,7 @@ def main():
     prompt_queue = queue.Queue()
 
     try:
-        ds = get_dedicated_server(loop, config, prompt_queue.put_nowait)
+        ds = make_dedicated_server(loop, config, prompt_queue.put_nowait)
     except Exception:
         LOG.fatal("failed to init dedicated server", exc_info=True)
         raise SystemExit(-1)
@@ -178,9 +190,10 @@ def main():
         LOG.fatal(e)
         raise SystemExit(-1)
 
+    input_handler = make_thread_safe_input_handler(loop, ds.input)
     input_thread = Thread(
         target=read_input,
-        args=(loop, prompt_queue.get, ds.input),
+        args=(prompt_queue.get, input_handler),
         daemon=True,
     )
     input_thread.start()
