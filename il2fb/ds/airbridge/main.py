@@ -4,13 +4,13 @@ import argparse
 import asyncio
 import functools
 import logging
+import math
 import platform
-import queue
 import readline
 import sys
+import threading
 
 from pathlib import Path
-from threading import Thread
 
 import psutil
 
@@ -62,6 +62,62 @@ def write_string_to_stream(stream, s: str) -> None:
     stream.flush()
 
 
+def write_string_to_stdout(s: str) -> None:
+    write_string_to_stream(sys.stdout, s)
+
+
+def write_string_to_stderr(s: str) -> None:
+    write_string_to_stream(sys.stderr, s)
+
+
+def print_prompt(s: str) -> None:
+    write_string_to_stdout(colorize_prompt(s))
+
+
+class Prompt:
+    _empty_value = math.nan
+
+    def __init__(self, idle_handler):
+        self._value = self._empty_value
+        self._mutex = threading.Lock()
+        self._not_empty = threading.Condition(self._mutex)
+        self._waiters_count = 0
+        self._idle_handler = idle_handler
+
+    @property
+    def is_empty(self) -> bool:
+        return self._value is self._empty_value
+
+    def reset(self):
+        self._value = self._empty_value
+
+    def put(self, value):
+        with self._not_empty:
+            if self._waiters_count:
+                self._value = value
+                self._not_empty.notify()
+            else:
+                self._idle_handler(value)
+
+    def pop(self):
+        with self._not_empty:
+            self._waiters_count += 1
+
+            while self.is_empty:
+                self._not_empty.wait()
+
+            value, self._value = self._value, self._empty_value
+            self._waiters_count -= 1
+
+        return value
+
+    def __enter__(self):
+        self._mutex.acquire()
+
+    def __exit__(self, type, value, traceback):
+        self._mutex.release()
+
+
 def read_input(prompt_getter, input_handler):
     while True:
         prompt = prompt_getter()
@@ -69,7 +125,7 @@ def read_input(prompt_getter, input_handler):
         if prompt is None:
             return
 
-        user_input = input(colorize_prompt(prompt))
+        user_input = input(prompt)
         line = user_input + '\n'
 
         try:
@@ -81,32 +137,22 @@ def read_input(prompt_getter, input_handler):
             return
 
 
-def make_thread_safe_input_handler(loop, input_handler):
+def make_thread_safe_input_handler(loop, handler):
 
     def thread_safe_handler(s: str) -> None:
-        asyncio.run_coroutine_threadsafe(input_handler(s), loop)
+        asyncio.run_coroutine_threadsafe(handler(s), loop)
 
     return thread_safe_handler
 
 
-def make_dedicated_server(loop, config, prompt_handler) -> DedicatedServer:
-    config_path = config.ds.get('config_path')
-    start_script_path = config.ds.get('start_script_path')
+def make_prompt_resetting_input_handler(prompt, handler):
 
-    stdout_writer = functools.partial(write_string_to_stream, sys.stdout)
-    stderr_writer = functools.partial(write_string_to_stream, sys.stderr)
+    def resetting_handler(s: str) -> None:
+        with prompt:
+            prompt.reset()
+            handler(s)
 
-    return DedicatedServer(
-        loop=loop,
-        exe_path=config.ds.exe_path,
-        config_path=config_path,
-        start_script_path=start_script_path,
-        wine_bin_path=config.wine_bin_path,
-        stdout_handler=stdout_writer,
-        stderr_handler=lambda s: stderr_writer(colorize_error(s)),
-        passive_prompt_handler=lambda s: stdout_writer(colorize_prompt(s)),
-        active_prompt_handler=prompt_handler,
-    )
+    return resetting_handler
 
 
 def validate_dedicated_server_config(config) -> None:
@@ -159,10 +205,20 @@ def main():
 
     loop = get_loop()
     asyncio.set_event_loop(loop)
-    prompt_queue = queue.Queue()
+    prompt = Prompt(idle_handler=print_prompt)
 
     try:
-        ds = make_dedicated_server(loop, config, prompt_queue.put_nowait)
+        ds = DedicatedServer(
+            loop=loop,
+            exe_path=config.ds.exe_path,
+            config_path=config.ds.get('config_path'),
+            start_script_path=config.ds.get('start_script_path'),
+            wine_bin_path=config.wine_bin_path,
+            stdout_handler=write_string_to_stdout,
+            stderr_handler=lambda s: write_string_to_stderr(colorize_error(s)),
+            passive_prompt_handler=print_prompt,
+            active_prompt_handler=prompt.put,
+        )
     except Exception:
         LOG.fatal("failed to init dedicated server", exc_info=True)
         raise SystemExit(-1)
@@ -191,9 +247,13 @@ def main():
         raise SystemExit(-1)
 
     input_handler = make_thread_safe_input_handler(loop, ds.input)
-    input_thread = Thread(
+    input_handler = make_prompt_resetting_input_handler(prompt, input_handler)
+    input_thread = threading.Thread(
         target=read_input,
-        args=(prompt_queue.get, input_handler),
+        kwargs=dict(
+            prompt_getter=lambda: colorize_prompt(prompt.pop()),
+            input_handler=input_handler,
+        ),
         daemon=True,
     )
     input_thread.start()
