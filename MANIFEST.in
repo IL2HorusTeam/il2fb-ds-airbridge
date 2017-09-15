@@ -1,2 +1,4 @@
 include README.rst
+include LICENSE
 include requirements/dist.txt
+include requirements/dist-windows.txt

@@ -5,9 +5,13 @@ import asyncio
 import logging
 import math
 import platform
-import readline
 import sys
 import threading
+
+try:
+    import readline
+except ImportError:
+    import pyreadline as readline
 
 from pathlib import Path
 
@@ -15,9 +19,9 @@ import psutil
 
 from colorama import init as init_colors, Fore, Style
 
-from .config import load_config
-from .dedicated_server import DedicatedServer
-from .logging import setup_logging
+from il2fb.ds.airbridge.config import load_config
+from il2fb.ds.airbridge.dedicated_server import DedicatedServer
+from il2fb.ds.airbridge.logging import setup_logging
 
 
 LOG = logging.getLogger(__name__)
@@ -264,3 +268,7 @@ def main():
     except Exception:
         LOG.fatal("fatal error has occured", exc_info=True)
         raise SystemExit(-1)
+
+
+if __name__ == '__main__':
+    main()

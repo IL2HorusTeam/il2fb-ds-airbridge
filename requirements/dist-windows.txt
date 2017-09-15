@@ -1,0 +1,3 @@
+-r dist.txt
+
+pyreadline==2.1

@@ -1,13 +1,14 @@
 # coding: utf-8
 
-import os
 import shlex
+import platform
 
+from pathlib import Path
 from setuptools import setup
 from subprocess import check_output
 
 
-__here__ = os.path.abspath(os.path.dirname(__file__))
+__here__ = Path(__file__).parent.absolute()
 
 
 def get_branch_or_none():
@@ -32,37 +33,50 @@ def get_commit_or_none():
         pass
 
 
-README = open(os.path.join(__here__, "README.rst")).read()
+def parse_requirements(file_path: Path):
+    requirements, dependencies = [], []
 
+    with open(file_path) as f:
+        for line in f:
+            line = line.strip()
+
+            if not line or line.startswith('#'):
+                continue
+            if line.startswith("-e"):
+                line = line.split(' ', 1)[1]
+                dependencies.append(line)
+                line = line.split("#egg=", 1)[1]
+                requirements.append(line)
+            elif line.startswith("-r"):
+                name = Path(line.split(' ', 1)[1])
+                path = file_path.parent / name
+                subrequirements, subdependencies = parse_requirements(path)
+                requirements.extend(subrequirements)
+                dependencies.extend(subdependencies)
+            else:
+                requirements.append(line)
+
+    return requirements, dependencies
+
+
+README = open(__here__ / "README.rst").read()
 CURRENT_COMMIT = get_commit_or_none()
 CURRENT_BRANCH = get_branch_or_none()
 STABLE_BRANCH = "master"
-IS_STABLE_BRANCH = CURRENT_BRANCH == STABLE_BRANCH
+IS_STABLE_BRANCH = (CURRENT_BRANCH == STABLE_BRANCH)
 BUILD_TAG = (
     f".{CURRENT_BRANCH}.{CURRENT_COMMIT}"
     if not IS_STABLE_BRANCH and CURRENT_COMMIT
     else ""
 )
-
-
-def split_requirements(lines):
-    requirements, dependencies = [], []
-
-    for line in lines:
-        if line.startswith("-e"):
-            line = line.split(' ', 1)[1]
-            dependencies.append(line)
-            line = line.split("#egg=", 1)[1]
-
-        requirements.append(line)
-
-    return requirements, dependencies
-
-
-with open(os.path.join(__here__, "requirements", "dist.txt")) as f:
-    REQUIREMENTS = [x.strip() for x in f]
-    REQUIREMENTS = [x for x in REQUIREMENTS if x and not x.startswith('#')]
-    REQUIREMENTS, DEPENDENCIES = split_requirements(REQUIREMENTS)
+REQUIREMENTS_FILE_NAME = (
+    "dist-windows.txt"
+    if platform.system() == 'Windows'
+    else "dist.txt"
+)
+REQUIREMENTS_FILE_PATH = __here__ / "requirements" / REQUIREMENTS_FILE_NAME
+REQUIREMENTS, DEPENDENCIES = parse_requirements(REQUIREMENTS_FILE_PATH)
+print(REQUIREMENTS, DEPENDENCIES)
 
 
 setup(
@@ -86,15 +100,16 @@ setup(
     install_requires=REQUIREMENTS,
     dependency_links=DEPENDENCIES,
     classifiers=[
-        "Development Status :: 1 - Planning",
-        "Environment :: Console",
-        "Intended Audience :: System Administrators",
-        "License :: OSI Approved :: MIT License",
-        "Natural Language :: English",
-        "Operating System :: OS Independent",
         "Programming Language :: Python :: 3.6",
+        "Operating System :: Unix",
+        "Operating System :: Microsoft :: Windows",
+        "License :: OSI Approved :: MIT License",
+        "Development Status :: 1 - Planning",
         "Topic :: Communications",
         "Topic :: Games/Entertainment :: Simulation",
+        "Environment :: Console",
+        "Intended Audience :: System Administrators",
+        "Natural Language :: English",
     ],
     options={
         'egg_info': {
