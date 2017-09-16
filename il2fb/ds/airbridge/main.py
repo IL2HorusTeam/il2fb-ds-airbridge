@@ -190,9 +190,10 @@ async def wait_for_dedicated_server_ports(
         if actual_ports == expected_ports:
             return
 
-        delay = min(timeout, 1)
-        asyncio.sleep(delay, loop=loop)
-        time_delta = start_time - loop.time()
+        delay = min(timeout, 0.1)
+        await asyncio.sleep(delay, loop=loop)
+
+        time_delta = loop.time() - start_time
         timeout = max(0, timeout - time_delta)
 
     raise RuntimeError("expected ports of dedicated server are closed")
