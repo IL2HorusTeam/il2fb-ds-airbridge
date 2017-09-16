@@ -18,6 +18,8 @@ from pathlib import Path
 import psutil
 
 from colorama import init as init_colors, Fore, Style
+from il2fb.ds.middleware.console.client import ConsoleClient
+from il2fb.ds.middleware.device_link.client import DeviceLinkClient
 
 from il2fb.ds.airbridge.config import load_config
 from il2fb.ds.airbridge.dedicated_server import DedicatedServer
@@ -252,6 +254,25 @@ def main():
         loop.run_until_complete(ds_task)
         raise SystemExit(-1)
 
+    console_client = ConsoleClient()
+    console_client_task = loop.create_task(loop.create_connection(
+        protocol_factory=lambda: console_client,
+        host=(ds.config.connection.host or "localhost"),
+        port=ds.config.console.connection.port,
+    ))
+    loop.run_until_complete(console_client.wait_connected())
+
+    remote_address = (
+        ds.config.device_link.connection.host or "localhost",
+        ds.config.device_link.connection.port,
+    )
+    device_link_client = DeviceLinkClient(remote_address)
+    device_link_task = loop.create_task(loop.create_datagram_endpoint(
+        protocol_factory=lambda: device_link_client,
+        remote_addr=remote_address,
+    ))
+    loop.run_until_complete(device_link_client.wait_connected())
+
     input_handler = make_thread_safe_input_handler(loop, ds.input)
     input_handler = make_prompt_resetting_input_handler(prompt, input_handler)
     input_thread = threading.Thread(
@@ -265,13 +286,26 @@ def main():
     input_thread.start()
 
     try:
-        loop.run_until_complete(asyncio.gather(ds_task))
+        loop.run_until_complete(asyncio.gather(
+            ds_task,
+            console_client_task,
+            device_link_task,
+        ))
     except KeyboardInterrupt:
         LOG.info("interrupted by user")
     except Exception:
         LOG.fatal("fatal error has occured", exc_info=True)
         raise SystemExit(-1)
+    finally:
+        ds.terminate()
+        console_client.close()
+        device_link_client.close()
 
+        loop.run_until_complete(asyncio.gather(
+            ds.wait_for_exit(),
+            console_client.wait_closed(),
+            device_link_client.wait_closed(),
+        ))
 
 if __name__ == '__main__':
     main()
