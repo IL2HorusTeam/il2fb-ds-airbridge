@@ -211,6 +211,7 @@ def main():
     setup_logging(config.logging)
 
     loop = get_loop()
+    loop.set_debug(config.debug)
     asyncio.set_event_loop(loop)
     prompt = Prompt(idle_handler=print_prompt)
 
