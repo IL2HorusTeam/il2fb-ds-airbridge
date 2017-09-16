@@ -173,8 +173,9 @@ def validate_dedicated_server_config(config) -> None:
 
 
 async def wait_for_dedicated_server_ports(
-    loop, pid, config, timeout=30,
+    loop, pid, config, timeout=5,
 ) -> None:
+
     process = psutil.Process(pid)
     expected_ports = {
         config.connection.port,
