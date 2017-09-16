@@ -8,7 +8,7 @@ import os
 import platform
 
 from pathlib import Path
-from typing import List, Awaitable
+from typing import List, Awaitable, Optional
 
 from il2fb.config.ds import ServerConfig
 
@@ -262,7 +262,7 @@ class DedicatedServer:
         if stream_tasks:
             await asyncio.gather(*stream_tasks)
 
-        await self.wait_for_exit()
+        return (await self.wait_for_exit())
 
     async def _start(self) -> Awaitable[List[asyncio.Task]]:
         tasks = []
@@ -329,12 +329,13 @@ class DedicatedServer:
         return self._start_future
 
     def terminate(self) -> None:
-        if self._process.returncode is None:
+        if self._process and self._process.returncode is None:
             self._process.terminate()
 
-    def wait_for_exit(self) -> Awaitable[None]:
-        return self._process.wait()
+    async def wait_for_exit(self) -> Awaitable[Optional[int]]:
+        if self._process:
+            return (await self._process.wait())
 
-    async def input(self, s: str) -> Awaitable:
+    async def input(self, s: str) -> Awaitable[None]:
         self._process.stdin.write(s.encode())
         await self._process.stdin.drain()

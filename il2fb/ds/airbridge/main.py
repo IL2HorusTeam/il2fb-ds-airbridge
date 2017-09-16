@@ -15,21 +15,22 @@ except ImportError:
     import pyreadline as readline
 
 from pathlib import Path
-from typing import Any, Awaitable, Callable
-
-import psutil
+from typing import Awaitable, Callable, Optional
 
 from colorama import init as init_colors, Fore, Style
-from ddict import DotAccessDict
-from il2fb.ds.middleware.console.client import ConsoleClient
-from il2fb.ds.middleware.device_link.client import DeviceLinkClient
+from funcy import log_calls
 
+from il2fb.ds.airbridge.application import Airbridge
+from il2fb.ds.airbridge.exceptions import AirbridgeException
 from il2fb.ds.airbridge.config import load_config
-from il2fb.ds.airbridge.dedicated_server import DedicatedServer
 from il2fb.ds.airbridge.logging import setup_logging
 
 
 LOG = logging.getLogger(__name__)
+
+
+StringProducer = Callable[[], str]
+StringHandler = Callable[[str], None]
 
 
 def load_args():
@@ -85,7 +86,7 @@ def print_prompt(s: str) -> None:
 class Prompt:
     _empty_value = math.nan
 
-    def __init__(self, idle_handler: Callable[[Any], None]):
+    def __init__(self, idle_handler: StringHandler):
         self._value = self._empty_value
         self._mutex = threading.Lock()
         self._not_empty = threading.Condition(self._mutex)
@@ -99,7 +100,8 @@ class Prompt:
     def reset(self) -> None:
         self._value = self._empty_value
 
-    def put(self, value: Any):
+    @log_calls(LOG.debug, errors=False)
+    def put(self, value: Optional[str]):
         with self._not_empty:
             if self._is_waiting:
                 self._value = value
@@ -107,7 +109,8 @@ class Prompt:
             else:
                 self._idle_handler(value)
 
-    def pop(self) -> Any:
+    @log_calls(LOG.debug, errors=False)
+    def pop(self) -> Optional[str]:
         with self._not_empty:
             self._is_waiting = True
 
@@ -126,9 +129,10 @@ class Prompt:
         self._mutex.release()
 
 
+@log_calls(LOG.debug, errors=False)
 def read_input(
-    prompt_getter: Callable[[], str],
-    input_handler: Callable[[str], None],
+    prompt_getter: StringProducer,
+    input_handler: StringHandler,
 ) -> None:
 
     while True:
@@ -151,8 +155,8 @@ def read_input(
 
 def make_thread_safe_input_handler(
     loop: asyncio.AbstractEventLoop,
-    handler: Callable[[str], None],
-) -> Callable[[str], None]:
+    handler: StringHandler,
+) -> StringHandler:
 
     def thread_safe_handler(s: str) -> None:
         asyncio.run_coroutine_threadsafe(handler(s), loop)
@@ -162,8 +166,8 @@ def make_thread_safe_input_handler(
 
 def make_prompt_resetting_input_handler(
     prompt: Prompt,
-    handler: Callable[[str], None],
-) -> Callable[[str], None]:
+    handler: StringHandler,
+) -> StringHandler:
 
     def resetting_handler(s: str) -> None:
         with prompt:
@@ -173,124 +177,64 @@ def make_prompt_resetting_input_handler(
     return resetting_handler
 
 
-def validate_dedicated_server_config(config: DotAccessDict) -> None:
-    if not config.console.connection.port:
-        raise ValueError(
-            "server's console is disabled, please configure it to proceed "
-            "(see: https://github.com/IL2HorusTeam/il2fb-ds-config#console-section)"
-        )
-
-    if not config.device_link.connection.port:
-        raise ValueError(
-            "server's device link is disabled, please configure it to proceed "
-            "(see: https://github.com/IL2HorusTeam/il2fb-ds-config#devicelink-section)"
-        )
-
-
-async def wait_for_dedicated_server_ports(
+def run_or_exit(
     loop: asyncio.AbstractEventLoop,
-    pid: int,
-    config: DotAccessDict,
-    timeout: float=3,
-) -> Awaitable[None]:
+    app: Airbridge,
+    awaitable: Awaitable,
+) -> None:
 
-    process = psutil.Process(pid)
-    expected_ports = {
-        config.connection.port,
-        config.console.connection.port,
-        config.device_link.connection.port,
-    }
+    try:
+        loop.run_until_complete(awaitable)
+    except KeyboardInterrupt:
+        LOG.warning("interrupted by user")
+    except AirbridgeException:
+        LOG.fatal("fatal error has occured")
+    except Exception:
+        LOG.fatal("fatal error has occured", exc_info=True)
+    else:
+        return
 
-    while timeout > 0:
-        start_time = loop.time()
+    app.ask_exit()
 
-        actual_ports = {c.laddr.port for c in process.connections('inet')}
-        if actual_ports == expected_ports:
-            return
+    return_code = loop.run_until_complete(app.wait_exit())
+    if return_code is None:
+        return_code = -1
 
-        delay = min(timeout, 0.1)
-        await asyncio.sleep(delay, loop=loop)
-
-        time_delta = loop.time() - start_time
-        timeout = max(0, timeout - time_delta)
-
-    raise RuntimeError("expected ports of dedicated server are closed")
+    LOG.fatal("terminate application")
+    raise SystemExit(return_code)
 
 
 def main():
-    readline.clear_history()
-    init_colors()
-
     args = load_args()
     config = load_config(args.config_path)
-
     setup_logging(config.logging)
+
+    LOG.info("init application")
+
+    readline.clear_history()
+    init_colors()
 
     loop = get_loop()
     loop.set_debug(config.debug)
     asyncio.set_event_loop(loop)
+
     prompt = Prompt(idle_handler=print_prompt)
 
-    try:
-        ds = DedicatedServer(
-            loop=loop,
-            exe_path=config.ds.exe_path,
-            config_path=config.ds.get('config_path'),
-            start_script_path=config.ds.get('start_script_path'),
-            wine_bin_path=config.wine_bin_path,
-            stdout_handler=write_string_to_stdout,
-            stderr_handler=lambda s: write_string_to_stderr(colorize_error(s)),
-            passive_prompt_handler=print_prompt,
-            active_prompt_handler=prompt.put,
-        )
-    except Exception:
-        LOG.fatal("failed to init dedicated server", exc_info=True)
-        raise SystemExit(-1)
+    app = Airbridge(
+        loop=loop,
+        config=config,
 
-    try:
-        validate_dedicated_server_config(ds.config)
-    except ValueError as e:
-        LOG.fatal(e)
-        raise SystemExit(-1)
-
-    ds_task = loop.create_task(ds.run())
-
-    try:
-        loop.run_until_complete(ds.wait_for_start())
-    except Exception:
-        ds_task.cancel()
-        LOG.fatal("failed to start dedicated server", exc_info=True)
-        raise SystemExit(-1)
-
-    try:
-        future = wait_for_dedicated_server_ports(loop, ds.pid, ds.config)
-        loop.run_until_complete(future)
-    except Exception as e:
-        LOG.fatal(e)
-        ds.terminate()
-        loop.run_until_complete(ds_task)
-        raise SystemExit(-1)
-
-    console_client = ConsoleClient()
-    console_client_task = loop.create_task(loop.create_connection(
-        protocol_factory=lambda: console_client,
-        host=(ds.config.connection.host or "localhost"),
-        port=ds.config.console.connection.port,
-    ))
-    loop.run_until_complete(console_client.wait_connected())
-
-    remote_address = (
-        ds.config.device_link.connection.host or "localhost",
-        ds.config.device_link.connection.port,
+        stdout_handler=write_string_to_stdout,
+        stderr_handler=lambda s: write_string_to_stderr(colorize_error(s)),
+        passive_prompt_handler=print_prompt,
+        active_prompt_handler=prompt.put,
     )
-    device_link_client = DeviceLinkClient(remote_address)
-    device_link_task = loop.create_task(loop.create_datagram_endpoint(
-        protocol_factory=lambda: device_link_client,
-        remote_addr=remote_address,
-    ))
-    loop.run_until_complete(device_link_client.wait_connected())
+    app_task = loop.create_task(app.run())
 
-    input_handler = make_thread_safe_input_handler(loop, ds.input)
+    LOG.info("wait for application to boot")
+    run_or_exit(loop, app, app.wait_boot())
+
+    input_handler = make_thread_safe_input_handler(loop, app.user_input)
     input_handler = make_prompt_resetting_input_handler(prompt, input_handler)
     input_thread = threading.Thread(
         target=read_input,
@@ -302,27 +246,9 @@ def main():
     )
     input_thread.start()
 
-    try:
-        loop.run_until_complete(asyncio.gather(
-            ds_task,
-            console_client_task,
-            device_link_task,
-        ))
-    except KeyboardInterrupt:
-        LOG.info("interrupted by user")
-    except Exception:
-        LOG.fatal("fatal error has occured", exc_info=True)
-        raise SystemExit(-1)
-    finally:
-        ds.terminate()
-        console_client.close()
-        device_link_client.close()
-
-        loop.run_until_complete(asyncio.gather(
-            ds.wait_for_exit(),
-            console_client.wait_closed(),
-            device_link_client.wait_closed(),
-        ))
+    LOG.info("run application")
+    run_or_exit(loop, app, app_task)
+    LOG.info("exit application")
 
 
 if __name__ == '__main__':
