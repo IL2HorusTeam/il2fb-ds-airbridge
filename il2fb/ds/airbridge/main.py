@@ -247,8 +247,9 @@ def main():
         future = wait_for_dedicated_server_ports(loop, ds.pid, ds.config)
         loop.run_until_complete(future)
     except Exception as e:
-        ds_task.cancel()
         LOG.fatal(e)
+        ds.terminate()
+        loop.run_until_complete(ds_task)
         raise SystemExit(-1)
 
     input_handler = make_thread_safe_input_handler(loop, ds.input)

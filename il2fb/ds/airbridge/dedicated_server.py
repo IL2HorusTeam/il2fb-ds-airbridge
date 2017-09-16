@@ -328,6 +328,10 @@ class DedicatedServer:
     def wait_for_start(self) -> Awaitable:
         return self._start_future
 
+    def terminate(self) -> None:
+        if self._process.returncode is None:
+            self._process.terminate()
+
     def wait_for_exit(self) -> Awaitable[None]:
         return self._process.wait()
 
