@@ -84,7 +84,7 @@ class Prompt:
         self._value = self._empty_value
         self._mutex = threading.Lock()
         self._not_empty = threading.Condition(self._mutex)
-        self._waiters_count = 0
+        self._is_waiting = True
         self._idle_handler = idle_handler
 
     @property
@@ -96,7 +96,7 @@ class Prompt:
 
     def put(self, value):
         with self._not_empty:
-            if self._waiters_count:
+            if self._is_waiting:
                 self._value = value
                 self._not_empty.notify()
             else:
@@ -104,13 +104,13 @@ class Prompt:
 
     def pop(self):
         with self._not_empty:
-            self._waiters_count += 1
+            self._is_waiting = True
 
             while self.is_empty:
                 self._not_empty.wait()
 
             value, self._value = self._value, self._empty_value
-            self._waiters_count -= 1
+            self._is_waiting = False
 
         return value
 
