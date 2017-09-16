@@ -262,7 +262,7 @@ class DedicatedServer:
         if stream_tasks:
             await asyncio.gather(*stream_tasks)
 
-        await self._process.wait()
+        await self.wait_for_exit()
 
     async def _start(self) -> Awaitable[List[asyncio.Task]]:
         tasks = []
@@ -327,6 +327,9 @@ class DedicatedServer:
 
     def wait_for_start(self) -> Awaitable:
         return self._start_future
+
+    def wait_for_exit(self) -> Awaitable[None]:
+        return self._process.wait()
 
     async def input(self, s: str) -> Awaitable:
         self._process.stdin.write(s.encode())
