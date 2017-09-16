@@ -2,6 +2,7 @@
 
 import argparse
 import asyncio
+import io
 import logging
 import math
 import platform
@@ -14,10 +15,12 @@ except ImportError:
     import pyreadline as readline
 
 from pathlib import Path
+from typing import Any, Awaitable, Callable
 
 import psutil
 
 from colorama import init as init_colors, Fore, Style
+from ddict import DotAccessDict
 from il2fb.ds.middleware.console.client import ConsoleClient
 from il2fb.ds.middleware.device_link.client import DeviceLinkClient
 
@@ -47,7 +50,7 @@ def load_args():
     return parser.parse_args()
 
 
-def get_loop():
+def get_loop() -> asyncio.AbstractEventLoop:
     if platform.system() == 'Windows':
         return asyncio.ProactorEventLoop()
 
@@ -62,7 +65,7 @@ def colorize_error(s: str) -> str:
     return f"{Fore.RED}{s}{Style.RESET_ALL}"
 
 
-def write_string_to_stream(stream, s: str) -> None:
+def write_string_to_stream(stream: io.RawIOBase, s: str) -> None:
     stream.write(s)
     stream.flush()
 
@@ -82,7 +85,7 @@ def print_prompt(s: str) -> None:
 class Prompt:
     _empty_value = math.nan
 
-    def __init__(self, idle_handler):
+    def __init__(self, idle_handler: Callable[[Any], None]):
         self._value = self._empty_value
         self._mutex = threading.Lock()
         self._not_empty = threading.Condition(self._mutex)
@@ -93,10 +96,10 @@ class Prompt:
     def is_empty(self) -> bool:
         return self._value is self._empty_value
 
-    def reset(self):
+    def reset(self) -> None:
         self._value = self._empty_value
 
-    def put(self, value):
+    def put(self, value: Any):
         with self._not_empty:
             if self._is_waiting:
                 self._value = value
@@ -104,7 +107,7 @@ class Prompt:
             else:
                 self._idle_handler(value)
 
-    def pop(self):
+    def pop(self) -> Any:
         with self._not_empty:
             self._is_waiting = True
 
@@ -123,7 +126,11 @@ class Prompt:
         self._mutex.release()
 
 
-def read_input(prompt_getter, input_handler):
+def read_input(
+    prompt_getter: Callable[[], str],
+    input_handler: Callable[[str], None],
+) -> None:
+
     while True:
         prompt = prompt_getter()
 
@@ -142,7 +149,10 @@ def read_input(prompt_getter, input_handler):
             return
 
 
-def make_thread_safe_input_handler(loop, handler):
+def make_thread_safe_input_handler(
+    loop: asyncio.AbstractEventLoop,
+    handler: Callable[[str], None],
+) -> Callable[[str], None]:
 
     def thread_safe_handler(s: str) -> None:
         asyncio.run_coroutine_threadsafe(handler(s), loop)
@@ -150,7 +160,10 @@ def make_thread_safe_input_handler(loop, handler):
     return thread_safe_handler
 
 
-def make_prompt_resetting_input_handler(prompt, handler):
+def make_prompt_resetting_input_handler(
+    prompt: Prompt,
+    handler: Callable[[str], None],
+) -> Callable[[str], None]:
 
     def resetting_handler(s: str) -> None:
         with prompt:
@@ -160,7 +173,7 @@ def make_prompt_resetting_input_handler(prompt, handler):
     return resetting_handler
 
 
-def validate_dedicated_server_config(config) -> None:
+def validate_dedicated_server_config(config: DotAccessDict) -> None:
     if not config.console.connection.port:
         raise ValueError(
             "server's console is disabled, please configure it to proceed "
@@ -175,8 +188,11 @@ def validate_dedicated_server_config(config) -> None:
 
 
 async def wait_for_dedicated_server_ports(
-    loop, pid, config, timeout=3,
-) -> None:
+    loop: asyncio.AbstractEventLoop,
+    pid: int,
+    config: DotAccessDict,
+    timeout: float=3,
+) -> Awaitable[None]:
 
     process = psutil.Process(pid)
     expected_ports = {
@@ -307,6 +323,7 @@ def main():
             console_client.wait_closed(),
             device_link_client.wait_closed(),
         ))
+
 
 if __name__ == '__main__':
     main()
