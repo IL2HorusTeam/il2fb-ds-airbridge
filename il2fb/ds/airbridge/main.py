@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Awaitable, Callable, Optional
 
 from colorama import init as init_colors, Fore, Style
-from funcy import log_calls
+from funcy import log_calls, log_enters
 
 from il2fb.ds.airbridge.application import Airbridge
 from il2fb.ds.airbridge.exceptions import AirbridgeException
@@ -100,7 +100,7 @@ class Prompt:
     def reset(self) -> None:
         self._value = self._empty_value
 
-    @log_calls(LOG.debug, errors=False)
+    @log_enters(LOG.debug)
     def put(self, value: Optional[str]):
         with self._not_empty:
             if self._is_waiting:
