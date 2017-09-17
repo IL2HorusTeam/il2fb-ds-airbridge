@@ -194,7 +194,7 @@ def run_or_exit(
     else:
         return
 
-    app.ask_exit()
+    app.exit()
 
     return_code = loop.run_until_complete(app.wait_exit())
     if return_code is None:

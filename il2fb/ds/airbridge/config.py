@@ -25,6 +25,24 @@ CONFIG_SCHEMA = {
                 'start_script_path': {
                     'type': 'string',
                 },
+                'console': {
+                    'type': 'object',
+                    'properties': {
+                        'bind': {
+                            'type': 'object',
+                            'properties': {
+                                'address': {
+                                    'type': 'string',
+                                },
+                                'port': {
+                                    'type': 'integer',
+                                },
+                            },
+                            'required': ['port', ],
+                        },
+                    },
+                    'required': ['bind', ],
+                },
             },
             'required': ['exe_path', ],
         },

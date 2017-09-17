@@ -14,6 +14,7 @@ from il2fb.config.ds import ServerConfig
 from il2fb.ds.middleware.console.client import ConsoleClient
 from il2fb.ds.middleware.device_link.client import DeviceLinkClient
 
+from .console import ConsoleProxy
 from .dedicated_server import DedicatedServer
 from .exceptions import AirbridgeException
 
@@ -96,10 +97,13 @@ class Airbridge:
         self._console_client = None
         self._console_task = None
 
+        self._console_proxy = None
+        self._console_proxy_task = None
+
         self._device_link_client = None
         self._device_link_task = None
 
-        self._boot_future = asyncio.Future()
+        self._boot_future = asyncio.Future(loop=self._loop)
 
     async def run(self) -> Awaitable[None]:
         try:
@@ -115,11 +119,16 @@ class Airbridge:
         self._console_client.close()
         self._device_link_client.close()
 
-        await asyncio.gather(
+        futures = [
             self._console_client.wait_closed(),
             self._device_link_client.wait_closed(),
-            loop=self._loop,
-        )
+        ]
+
+        if self._console_proxy_task:
+            self._console_proxy.exit()
+            futures.append(self._console_proxy.wait_exit())
+
+        await asyncio.gather(*futures, loop=self._loop)
 
         if return_code != 0:
             LOG.fatal(f"dedicated server has exited with code {return_code}")
@@ -177,21 +186,24 @@ class Airbridge:
             raise AirbridgeException
 
     async def _connect_to_server(self) -> Awaitable[None]:
-        config = self._dedicated_server.config
+        ds_config = self._dedicated_server.config
 
-        self._console_client = ConsoleClient()
+        self._console_client = ConsoleClient(loop=self._loop)
         future = self._loop.create_connection(
             protocol_factory=lambda: self._console_client,
-            host=(config.connection.host or "localhost"),
-            port=config.console.connection.port,
+            host=(ds_config.connection.host or "localhost"),
+            port=ds_config.console.connection.port,
         )
         self._console_task = self._loop.create_task(future)
 
         remote_address = (
-            (config.device_link.connection.host or "localhost"),
-            config.device_link.connection.port,
+            (ds_config.device_link.connection.host or "localhost"),
+            ds_config.device_link.connection.port,
         )
-        self._device_link_client = DeviceLinkClient(remote_address)
+        self._device_link_client = DeviceLinkClient(
+            remote_address=remote_address,
+            loop=self._loop,
+        )
         future = self._loop.create_datagram_endpoint(
             protocol_factory=lambda: self._device_link_client,
             remote_addr=remote_address,
@@ -204,15 +216,30 @@ class Airbridge:
             loop=self._loop,
         )
 
-    def ask_exit(self) -> None:
-        if self._dedicated_server_task:
-            self._dedicated_server.terminate()
+        console_proxy_config = self._config.ds.console
+        if console_proxy_config:
+            self._console_proxy = ConsoleProxy(
+                loop=self._loop,
+                config=console_proxy_config,
+                console_client=self._console_client,
+            )
+            future = self._console_proxy.run()
+            self._console_proxy_task = self._loop.create_task(future)
+
+    def exit(self) -> None:
+        if not self._dedicated_server_task:
+            return
+
+        self._dedicated_server.terminate()
 
         if self._console_task:
             self._console_client.close()
 
         if self._device_link_task:
             self._device_link_client.close()
+
+        if self._console_proxy_task:
+            self._console_proxy.exit()
 
     async def wait_exit(self) -> Awaitable[Optional[int]]:
         if not self._dedicated_server_task:
@@ -226,6 +253,9 @@ class Airbridge:
 
         if self._device_link_task:
             awaitables.append(self._device_link_client.wait_closed())
+
+        if self._console_proxy_task:
+            awaitables.append(self._console_proxy.wait_exit())
 
         results = await asyncio.gather(*awaitables)
         return_code = results[0]
