@@ -15,7 +15,7 @@ from il2fb.ds.middleware.console.client import ConsoleClient
 from il2fb.ds.middleware.device_link.client import DeviceLinkClient
 
 from .console import ConsoleProxy
-from .dedicated_server import DedicatedServer
+from .dedicated_server import DedicatedServer, DedicatedServerIOHandlers
 from .exceptions import AirbridgeException
 
 
@@ -74,22 +74,13 @@ class Airbridge:
 
     def __init__(
         self,
-
         loop: asyncio.AbstractEventLoop,
         config: DotAccessDict,
-
-        stdout_handler: StringHandler=None,
-        stderr_handler: StringHandler=None,
-        passive_prompt_handler: StringHandler=None,
-        active_prompt_handler: StringHandler=None,
+        server_io_handlers: DedicatedServerIOHandlers=None,
     ):
         self._loop = loop
         self._config = config
-
-        self._stdout_handler = stdout_handler
-        self._stderr_handler = stderr_handler
-        self._passive_prompt_handler = passive_prompt_handler
-        self._active_prompt_handler = active_prompt_handler
+        self._server_io_handlers = server_io_handlers
 
         self._dedicated_server = None
         self._dedicated_server_task = None
@@ -142,16 +133,11 @@ class Airbridge:
         try:
             self._dedicated_server = DedicatedServer(
                 loop=self._loop,
-
                 exe_path=self._config.ds.exe_path,
                 config_path=self._config.ds.get('config_path'),
                 start_script_path=self._config.ds.get('start_script_path'),
                 wine_bin_path=self._config.wine_bin_path,
-
-                stdout_handler=self._stdout_handler,
-                stderr_handler=self._stderr_handler,
-                passive_prompt_handler=self._passive_prompt_handler,
-                active_prompt_handler=self._active_prompt_handler,
+                io_handlers=self._server_io_handlers,
             )
         except Exception:
             LOG.fatal("failed to init dedicated server", exc_info=True)

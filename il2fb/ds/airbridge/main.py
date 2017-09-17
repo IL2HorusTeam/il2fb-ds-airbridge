@@ -21,8 +21,9 @@ from colorama import init as init_colors, Fore, Style
 from funcy import log_calls, log_enters
 
 from il2fb.ds.airbridge.application import Airbridge
-from il2fb.ds.airbridge.exceptions import AirbridgeException
 from il2fb.ds.airbridge.config import load_config
+from il2fb.ds.airbridge.dedicated_server import DedicatedServerIOHandlers
+from il2fb.ds.airbridge.exceptions import AirbridgeException
 from il2fb.ds.airbridge.logging import setup_logging
 
 
@@ -220,15 +221,14 @@ def main():
 
     prompt = Prompt(idle_handler=print_prompt)
 
-    app = Airbridge(
-        loop=loop,
-        config=config,
-
-        stdout_handler=write_string_to_stdout,
-        stderr_handler=lambda s: write_string_to_stderr(colorize_error(s)),
-        passive_prompt_handler=print_prompt,
-        active_prompt_handler=prompt.put,
+    io_handlers = DedicatedServerIOHandlers(
+        stdout=write_string_to_stdout,
+        stderr=lambda s: write_string_to_stderr(colorize_error(s)),
+        passive_prompt=print_prompt,
+        active_prompt=prompt.put,
     )
+
+    app = Airbridge(loop=loop, config=config, server_io_handlers=io_handlers)
     app_task = loop.create_task(app.run())
 
     LOG.info("wait for application to boot")

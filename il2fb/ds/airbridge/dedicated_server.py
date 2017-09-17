@@ -7,6 +7,7 @@ import logging
 import os
 import platform
 
+from collections import namedtuple
 from pathlib import Path
 from typing import List, Awaitable, Optional
 
@@ -17,6 +18,12 @@ LOG = logging.getLogger(__name__)
 
 DEFAULT_CONFIG_NAME = "confs.ini"
 DEFAULT_START_SCRIPT_NAME = "server.cmd"
+
+
+DedicatedServerIOHandlers = namedtuple(
+    'DedicatedServerIOHandlers',
+    ['stderr', 'stdout', 'active_prompt', 'passive_prompt'],
+)
 
 
 def _try_to_normalize_exe_path(initial: str) -> Path:
@@ -201,10 +208,7 @@ class DedicatedServer:
         config_path: str=None,
         start_script_path: str=None,
         wine_bin_path: str="wine",
-        stdout_handler=None,
-        stderr_handler=None,
-        passive_prompt_handler=None,
-        active_prompt_handler=None,
+        io_handlers: DedicatedServerIOHandlers=None,
     ):
         self._loop = loop
         self.exe_path = _try_to_normalize_exe_path(exe_path)
@@ -220,23 +224,23 @@ class DedicatedServer:
         )
         self._wine_bin_path = wine_bin_path
         self._stdout_handler = (
-            functools.partial(_try_to_handle_string, stdout_handler)
-            if stdout_handler
+            functools.partial(_try_to_handle_string, io_handlers.stdout)
+            if io_handlers.stdout
             else None
         )
         self._stderr_handler = (
-            functools.partial(_try_to_handle_string, stderr_handler)
-            if stderr_handler
+            functools.partial(_try_to_handle_string, io_handlers.stderr)
+            if io_handlers.stderr
             else None
         )
         self._passive_prompt_handler = (
-            functools.partial(_try_to_handle_string, passive_prompt_handler)
-            if passive_prompt_handler
+            functools.partial(_try_to_handle_string, io_handlers.passive_prompt)
+            if io_handlers.passive_prompt
             else None
         )
         self._active_prompt_handler = (
-            functools.partial(_try_to_handle_string, active_prompt_handler)
-            if active_prompt_handler
+            functools.partial(_try_to_handle_string, io_handlers.active_prompt)
+            if io_handlers.active_prompt
             else None
         )
         self._process = None
