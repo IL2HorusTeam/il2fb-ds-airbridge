@@ -86,13 +86,13 @@ class Airbridge:
         self._dedicated_server_task = None
 
         self._console_client = None
-        self._console_task = None
+        self._console_client_task = None
 
         self._console_proxy = None
         self._console_proxy_task = None
 
         self._device_link_client = None
-        self._device_link_task = None
+        self._device_link_client_task = None
 
         self._boot_future = asyncio.Future(loop=self._loop)
 
@@ -180,7 +180,7 @@ class Airbridge:
             host=(ds_config.connection.host or "localhost"),
             port=ds_config.console.connection.port,
         )
-        self._console_task = self._loop.create_task(future)
+        self._console_client_task = self._loop.create_task(future)
 
         remote_address = (
             (ds_config.device_link.connection.host or "localhost"),
@@ -194,7 +194,7 @@ class Airbridge:
             protocol_factory=lambda: self._device_link_client,
             remote_addr=remote_address,
         )
-        self._device_link_task = self._loop.create_task(future)
+        self._device_link_client_task = self._loop.create_task(future)
 
         await asyncio.gather(
             self._console_client.wait_connected(),
@@ -218,10 +218,10 @@ class Airbridge:
 
         self._dedicated_server.terminate()
 
-        if self._console_task:
+        if self._console_client_task:
             self._console_client.close()
 
-        if self._device_link_task:
+        if self._device_link_client_task:
             self._device_link_client.close()
 
         if self._console_proxy_task:
@@ -234,10 +234,10 @@ class Airbridge:
         dedicated_server_future = self._dedicated_server.wait_for_exit()
         awaitables = [dedicated_server_future, ]
 
-        if self._console_task:
+        if self._console_client_task:
             awaitables.append(self._console_client.wait_closed())
 
-        if self._device_link_task:
+        if self._device_link_client_task:
             awaitables.append(self._device_link_client.wait_closed())
 
         if self._console_proxy_task:
