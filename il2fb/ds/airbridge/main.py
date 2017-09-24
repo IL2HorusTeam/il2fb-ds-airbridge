@@ -52,13 +52,6 @@ def load_args():
     return parser.parse_args()
 
 
-def get_loop() -> asyncio.AbstractEventLoop:
-    if platform.system() == 'Windows':
-        return asyncio.ProactorEventLoop()
-
-    return asyncio.SelectorEventLoop()
-
-
 def colorize_prompt(s: str) -> str:
     return f"{Fore.GREEN}{s}{Style.RESET_ALL}"
 
@@ -215,9 +208,7 @@ def main():
     readline.clear_history()
     init_colors()
 
-    loop = get_loop()
-    loop.set_debug(config.debug)
-    asyncio.set_event_loop(loop)
+    loop = asyncio.get_event_loop()
 
     prompt = Prompt(idle_handler=print_prompt)
 
