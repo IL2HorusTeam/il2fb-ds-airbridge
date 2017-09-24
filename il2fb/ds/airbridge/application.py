@@ -16,6 +16,7 @@ from il2fb.ds.middleware.device_link.client import DeviceLinkClient
 
 from .console import ConsoleProxy
 from .dedicated_server import DedicatedServer, DedicatedServerIOHandlers
+from .device_link import DeviceLinkProxy
 from .exceptions import AirbridgeException
 
 
@@ -94,6 +95,9 @@ class Airbridge:
         self._device_link_client = None
         self._device_link_client_task = None
 
+        self._device_link_proxy = None
+        self._device_link_proxy_task = None
+
         self._boot_future = asyncio.Future(loop=self._loop)
 
     async def run(self) -> Awaitable[None]:
@@ -118,6 +122,10 @@ class Airbridge:
         if self._console_proxy_task:
             self._console_proxy.exit()
             futures.append(self._console_proxy.wait_exit())
+
+        if self._device_link_proxy_task:
+            self._device_link_proxy.exit()
+            futures.append(self._device_link_proxy.wait_exit())
 
         await asyncio.gather(*futures, loop=self._loop)
 
@@ -212,6 +220,16 @@ class Airbridge:
             future = self._console_proxy.run()
             self._console_proxy_task = self._loop.create_task(future)
 
+        device_link_proxy_config = self._config.ds.device_link
+        if device_link_proxy_config:
+            self._device_link_proxy = DeviceLinkProxy(
+                loop=self._loop,
+                config=device_link_proxy_config,
+                device_link_client=self._device_link_client,
+            )
+            future = self._device_link_proxy.run()
+            self._device_link_proxy_task = self._loop.create_task(future)
+
     def exit(self) -> None:
         if not self._dedicated_server_task:
             return
@@ -226,6 +244,9 @@ class Airbridge:
 
         if self._console_proxy_task:
             self._console_proxy.exit()
+
+        if self._device_link_proxy_task:
+            self._device_link_proxy.exit()
 
     async def wait_exit(self) -> Awaitable[Optional[int]]:
         if not self._dedicated_server_task:
@@ -242,6 +263,9 @@ class Airbridge:
 
         if self._console_proxy_task:
             awaitables.append(self._console_proxy.wait_exit())
+
+        if self._device_link_proxy_task:
+            awaitables.append(self._device_link_proxy.wait_exit())
 
         results = await asyncio.gather(*awaitables)
         return_code = results[0]

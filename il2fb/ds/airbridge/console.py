@@ -24,17 +24,17 @@ class ConsoleConnection(asyncio.Protocol):
         self._peer = None
         self._closed_ack = asyncio.Future(loop=self._loop)
 
-        self._servers = []
+        self._listeners = []
 
     @property
     def peer(self):
         return self._peer
 
     def register_listener(self, listener: Callable[[bytes], None]) -> None:
-        self._servers.append(listener)
+        self._listeners.append(listener)
 
     def unregister_listener(self, listener: Callable[[bytes], None]) -> None:
-        self._servers.remove(listener)
+        self._listeners.remove(listener)
 
     def connection_made(self, transport) -> None:
         self._transport = transport
@@ -73,7 +73,7 @@ class ConsoleConnection(asyncio.Protocol):
         if not data:
             return
 
-        for listener in self._servers:
+        for listener in self._listeners:
             try:
                 listener(data)
             except Exception:
@@ -99,7 +99,7 @@ class ConsoleProxy:
         self._server = None
         self._connections = []
 
-    async def run(self):
+    async def run(self) -> Awaitable[None]:
         self._server = await self._loop.create_server(
             lambda: ConsoleConnection(loop=self._loop, registry=self),
             (self._config.bind.address or "localhost"),
@@ -119,7 +119,7 @@ class ConsoleProxy:
         connection.unregister_listener(self._console_client.write_bytes)
         self._connections.remove(connection)
 
-    def exit(self):
+    def exit(self) -> None:
         if self._server:
             self._server.close()
 
