@@ -5,25 +5,20 @@ import configparser
 import functools
 import logging
 import os
-import platform
 
-from collections import namedtuple
 from pathlib import Path
-from typing import List, Awaitable, Optional
+from typing import List, Awaitable
 
 from il2fb.config.ds import ServerConfig
+
+from .compat import IS_WINDOWS
+from .typing import IntOrNone, StringHandler, StringList
 
 
 LOG = logging.getLogger(__name__)
 
 DEFAULT_CONFIG_NAME = "confs.ini"
 DEFAULT_START_SCRIPT_NAME = "server.cmd"
-
-
-DedicatedServerIOHandlers = namedtuple(
-    'DedicatedServerIOHandlers',
-    ['stderr', 'stdout', 'active_prompt', 'passive_prompt'],
-)
 
 
 def _try_to_normalize_exe_path(initial: str) -> Path:
@@ -111,7 +106,7 @@ def _is_eol(char: str) -> bool:
     return char == '\n'
 
 
-def _is_prompt(char: str, chars: List[str]) -> bool:
+def _is_prompt(char: str, chars: StringList) -> bool:
     if char != '>':
         return False
 
@@ -203,12 +198,14 @@ class DedicatedServer:
 
     def __init__(
         self,
-        loop,
+        loop: asyncio.AbstractEventLoop,
         exe_path: str,
         config_path: str=None,
         start_script_path: str=None,
         wine_bin_path: str="wine",
-        io_handlers: DedicatedServerIOHandlers=None,
+        stdout_handler: StringHandler=None,
+        stderr_handler: StringHandler=None,
+        prompt_handler: StringHandler=None,
     ):
         self._loop = loop
         self.exe_path = _try_to_normalize_exe_path(exe_path)
@@ -224,23 +221,18 @@ class DedicatedServer:
         )
         self._wine_bin_path = wine_bin_path
         self._stdout_handler = (
-            functools.partial(_try_to_handle_string, io_handlers.stdout)
-            if io_handlers.stdout
+            functools.partial(_try_to_handle_string, stdout_handler)
+            if stdout_handler
             else None
         )
         self._stderr_handler = (
-            functools.partial(_try_to_handle_string, io_handlers.stderr)
-            if io_handlers.stderr
+            functools.partial(_try_to_handle_string, stderr_handler)
+            if stderr_handler
             else None
         )
-        self._passive_prompt_handler = (
-            functools.partial(_try_to_handle_string, io_handlers.passive_prompt)
-            if io_handlers.passive_prompt
-            else None
-        )
-        self._active_prompt_handler = (
-            functools.partial(_try_to_handle_string, io_handlers.active_prompt)
-            if io_handlers.active_prompt
+        self._prompt_handler = (
+            functools.partial(_try_to_handle_string, prompt_handler)
+            if prompt_handler
             else None
         )
         self._process = None
@@ -292,7 +284,7 @@ class DedicatedServer:
             input_line=input_line,
             stop_line=stop_line,
             output_handler=self._stdout_handler,
-            prompt_handler=self._passive_prompt_handler,
+            prompt_handler=self._prompt_handler,
         ))
 
         await self.input(input_line)
@@ -303,7 +295,7 @@ class DedicatedServer:
                 stream=self._process.stdout,
                 stream_name="STDOUT",
                 output_handler=self._stdout_handler,
-                prompt_handler=self._active_prompt_handler,
+                prompt_handler=self._prompt_handler,
             ))
             tasks.append(stream_task)
         else:
@@ -314,8 +306,8 @@ class DedicatedServer:
     async def _spawn_process(self) -> Awaitable:
         args = (
             []
-            if platform.system() == 'Windows'
-            else [self._wine_bin_path, ]
+            if IS_WINDOWS
+            else [self._wine_bin_path]
         )
         args.extend([
             str(self.exe_path),
@@ -336,7 +328,7 @@ class DedicatedServer:
         if self._process and self._process.returncode is None:
             self._process.terminate()
 
-    async def wait_for_exit(self) -> Awaitable[Optional[int]]:
+    async def wait_for_exit(self) -> Awaitable[IntOrNone]:
         if self._process:
             return (await self._process.wait())
 
