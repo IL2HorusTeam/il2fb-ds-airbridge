@@ -64,7 +64,7 @@ class TextFileWatchdog:
 
     def _run(self) -> None:
         while not self._path.exists():
-            self._sleep_or_stop()
+            self._sleep_and_maybe_stop()
 
         with self._path.open(buffering=1) as f:
             self._read_lines(f)
@@ -81,7 +81,7 @@ class TextFileWatchdog:
                 self._handle_string(line)
             else:
                 self._check_file_is_still_the_same()
-                self._sleep_or_stop()
+                self._sleep_and_maybe_stop()
                 f.seek(where)
 
     def _get_inode(self):
@@ -108,7 +108,7 @@ class TextFileWatchdog:
             self._inode = None
             raise FileNotFoundError
 
-    def _sleep_or_stop(self) -> None:
+    def _sleep_and_maybe_stop(self) -> None:
         time.sleep(self._polling_period)
         self._maybe_stop()
 
