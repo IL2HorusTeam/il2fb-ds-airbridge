@@ -80,7 +80,11 @@ class TextFileWatchdog:
                 line = line.strip()
                 self._handle_string(line)
             else:
-                inode = self._get_inode()
+                try:
+                    inode = self._get_inode()
+                except FileNotFoundError:
+                    self._inode = None
+                    raise
 
                 if inode != self._inode:
                     self._inode = None
