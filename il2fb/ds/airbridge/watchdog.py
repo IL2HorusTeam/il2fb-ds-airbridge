@@ -80,16 +80,7 @@ class TextFileWatchdog:
                 line = line.strip()
                 self._handle_string(line)
             else:
-                try:
-                    inode = self._get_inode()
-                except FileNotFoundError:
-                    self._inode = None
-                    raise
-
-                if inode != self._inode:
-                    self._inode = None
-                    raise FileNotFoundError
-
+                self._check_file_is_still_the_same()
                 self._sleep_or_stop()
                 f.seek(where)
 
@@ -105,6 +96,17 @@ class TextFileWatchdog:
                     LOG.exception(
                         f"subscriber {subscriber} failed to handle string {s}"
                     )
+
+    def _check_file_is_still_the_same(self):
+        try:
+            inode = self._get_inode()
+        except FileNotFoundError:
+            self._inode = None
+            raise
+
+        if inode != self._inode:
+            self._inode = None
+            raise FileNotFoundError
 
     def _sleep_or_stop(self) -> None:
         time.sleep(self._polling_period)
