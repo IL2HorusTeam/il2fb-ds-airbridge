@@ -78,7 +78,7 @@ class TextFileWatchdog:
         except StopWatchdog:
             LOG.info(f"watchdog for text file `{self._path}` has stopped")
         except Exception:
-            LOG.info(f"watchdog for text file `{self._path}` has terminated")
+            LOG.error(f"watchdog for text file `{self._path}` has terminated")
             raise
 
     def _run_with_retries(self) -> None:
