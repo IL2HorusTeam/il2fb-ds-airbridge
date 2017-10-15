@@ -5,7 +5,10 @@ import logging
 import threading
 import time
 
+from collections import namedtuple
 from pathlib import Path
+
+from ddict import DotAccessDict
 
 from .typing import StringHandler, StringOrPath, IntOrNone
 
@@ -17,25 +20,44 @@ class StopWatchdog(Exception):
     pass
 
 
+class TextFileWatchdogState(DotAccessDict):
+
+    def __init__(self, inode: IntOrNone=None, offset: int=0):
+        super().__init__(
+            inode=inode,
+            offset=offset,
+        )
+
+    def clear(self) -> None:
+        self.inode = None
+        self.offset = 0
+
+
 class TextFileWatchdog:
 
     def __init__(
         self,
         path: StringOrPath,
-        inode: IntOrNone=None,
-        offset: int=0,
         polling_period: float=0.5,
+        state: TextFileWatchdogState=None,
     ):
         self._path = path if isinstance(path, Path) else Path(path)
-        self._inode = inode
-        self._offset = offset
         self._polling_period = polling_period
+        self._state = state or TextFileWatchdogState()
 
         self._do_stop = False
         self._stop_lock = threading.Lock()
 
         self._subscribers = []
         self._subscribers_lock = threading.Lock()
+
+    @property
+    def state(self):
+        """
+        Warning: not thread-safe.
+
+        """
+        return self._state
 
     def subscribe(self, subscriber: StringHandler) -> None:
         with self._subscribers_lock:
@@ -66,33 +88,29 @@ class TextFileWatchdog:
             try:
                 self._try_to_run()
             except FileNotFoundError:
-                self._clear_state()
+                self._state.clear()
                 continue
 
     def _try_to_run(self) -> None:
         if self._path.exists():
             self._reset_state_if_file_was_recreated()
         else:
-            self._clear_state()
+            self._state.clear()
             self._wait_for_file_to_get_created()
 
-        if self._inode is None:
-            self._inode = self._get_actual_inode()
+        if self._state.inode is None:
+            self._state.inode = self._get_actual_inode()
 
         with self._path.open(buffering=1) as f:
-            f.seek(self._offset)
+            f.seek(self._state.offset)
             self._read_lines(f)
 
     def _reset_state_if_file_was_recreated(self):
         inode = self._get_actual_inode()
 
-        if self._inode != inode:
-            self._inode = inode
-            self._offset = 0
-
-    def _clear_state(self) -> None:
-        self._inode = None
-        self._offset = 0
+        if self._state.inode != inode:
+            self._state.inode = inode
+            self._state.offset = 0
 
     def _wait_for_file_to_get_created(self):
         while not self._path.exists():
@@ -100,7 +118,7 @@ class TextFileWatchdog:
 
     def _read_lines(self, f: io.TextIOWrapper) -> None:
         while True:
-            self._offset = f.tell()
+            self._state.offset = f.tell()
             line = f.readline()
 
             if line:
@@ -109,7 +127,7 @@ class TextFileWatchdog:
             else:
                 self._stop_if_file_was_deleted_or_recreated()
                 self._sleep_and_maybe_stop()
-                f.seek(self._offset)
+                f.seek(self._state.offset)
 
     def _stop_if_file_was_deleted_or_recreated(self) -> None:
         if not self._file_is_still_the_same():
@@ -117,10 +135,13 @@ class TextFileWatchdog:
 
     def _file_is_still_the_same(self) -> bool:
         inode = self._get_actual_inode()
-        return (self._inode == inode)
+        return (self._state.inode == inode)
 
     def _get_actual_inode(self) -> int:
-        # Can raise FileNotFoundError if file does not exist
+        """
+        Can raise FileNotFoundError if file does not exist.
+
+        """
         return self._path.lstat().st_ino
 
     def _sleep_and_maybe_stop(self) -> None:
