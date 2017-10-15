@@ -10,10 +10,10 @@ from ddict import DotAccessDict
 from il2fb.ds.middleware.console.client import ConsoleClient
 from il2fb.ds.middleware.device_link.client import DeviceLinkClient
 
-from .console import ConsoleProxy
-from .dedicated_server import DedicatedServer
-from .device_link import DeviceLinkProxy
-from .typing import IntOrNone
+from il2fb.ds.airbridge.dedicated_server.console import ConsoleProxy
+from il2fb.ds.airbridge.dedicated_server.device_link import DeviceLinkProxy
+from il2fb.ds.airbridge.dedicated_server.process import DedicatedServer
+from il2fb.ds.airbridge.typing import IntOrNone
 
 
 LOG = logging.getLogger(__name__)

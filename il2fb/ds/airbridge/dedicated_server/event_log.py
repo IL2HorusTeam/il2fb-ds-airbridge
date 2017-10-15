@@ -8,8 +8,8 @@ from typing import Callable
 from il2fb.parsers.events.events import Event
 from il2fb.parsers.events.exceptions import EventParsingError
 
-from .typing import EventOrNone, EventHandler
-from .typing import StringOrNoneProducer, StringHandler
+from il2fb.ds.airbridge.typing import EventOrNone, EventHandler
+from il2fb.ds.airbridge.typing import StringOrNoneProducer, StringHandler
 
 
 LOG = logging.getLogger(__name__)

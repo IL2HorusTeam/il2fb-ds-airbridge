@@ -91,6 +91,7 @@ setup(
     author_email="oblovatniy@gmail.com",
     packages=[
         "il2fb.ds.airbridge",
+        "il2fb.ds.airbridge.dedicated_server",
     ],
     namespace_packages=[
         "il2fb",

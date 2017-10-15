@@ -11,8 +11,8 @@ from typing import List, Awaitable
 
 from il2fb.config.ds import ServerConfig
 
-from .compat import IS_WINDOWS
-from .typing import IntOrNone, StringHandler, StringList
+from il2fb.ds.airbridge.compat import IS_WINDOWS
+from il2fb.ds.airbridge.typing import IntOrNone, StringHandler, StringList
 
 
 LOG = logging.getLogger(__name__)
