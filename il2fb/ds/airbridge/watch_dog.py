@@ -16,11 +16,11 @@ from .typing import StringHandler, StringOrPath, IntOrNone
 LOG = logging.getLogger(__name__)
 
 
-class StopWatchdog(Exception):
+class StopWatchDog(Exception):
     pass
 
 
-class TextFileWatchdogState(DotAccessDict):
+class TextFileWatchDogState(DotAccessDict):
 
     def __init__(self, inode: IntOrNone=None, offset: int=0):
         super().__init__(
@@ -33,17 +33,17 @@ class TextFileWatchdogState(DotAccessDict):
         self.offset = 0
 
 
-class TextFileWatchdog:
+class TextFileWatchDog:
 
     def __init__(
         self,
         path: StringOrPath,
         polling_period: float=0.5,
-        state: TextFileWatchdogState=None,
+        state: TextFileWatchDogState=None,
     ):
         self._path = path if isinstance(path, Path) else Path(path)
         self._polling_period = polling_period
-        self._state = state or TextFileWatchdogState()
+        self._state = state or TextFileWatchDogState()
 
         self._do_stop = False
         self._stop_lock = threading.Lock()
@@ -73,12 +73,12 @@ class TextFileWatchdog:
 
     def run(self) -> None:
         try:
-            LOG.info(f"watchdog for text file `{self._path}` has started")
+            LOG.info(f"watch dog for text file `{self._path}` has started")
             self._run_with_retries()
-        except StopWatchdog:
-            LOG.info(f"watchdog for text file `{self._path}` has stopped")
+        except StopWatchDog:
+            LOG.info(f"watch dog for text file `{self._path}` has stopped")
         except Exception:
-            LOG.error(f"watchdog for text file `{self._path}` has terminated")
+            LOG.error(f"watch dog for text file `{self._path}` has terminated")
             raise
 
     def _run_with_retries(self) -> None:
@@ -151,7 +151,7 @@ class TextFileWatchdog:
     def _maybe_stop(self) -> None:
         with self._stop_lock:
             if self._do_stop:
-                raise StopWatchdog
+                raise StopWatchDog
 
     def _handle_string(self, s: str) -> None:
         with self._subscribers_lock:
