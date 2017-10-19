@@ -10,7 +10,6 @@ from il2fb.ds.middleware.device_link.client import DeviceLinkClient
 from il2fb.ds.middleware.device_link.helpers import (
     decompose_data, compose_answer,
 )
-from il2fb.ds.middleware.device_link.requests import DeviceLinkRequest
 
 
 LOG = logging.getLogger(__name__)
