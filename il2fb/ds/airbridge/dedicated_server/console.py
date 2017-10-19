@@ -24,17 +24,25 @@ class ConsoleConnection(asyncio.Protocol):
         self._peer = None
         self._closed_ack = asyncio.Future(loop=self._loop)
 
-        self._listeners = []
+        self._data_subscribers = []
 
     @property
     def peer(self):
         return self._peer
 
-    def register_listener(self, listener: Callable[[bytes], None]) -> None:
-        self._listeners.append(listener)
+    def subscribe_to_data(self, subscriber: Callable[[bytes], None]) -> None:
+        """
+        Not thread-safe.
 
-    def unregister_listener(self, listener: Callable[[bytes], None]) -> None:
-        self._listeners.remove(listener)
+        """
+        self._data_subscribers.append(subscriber)
+
+    def unsubscribe_from_data(self, subscriber: Callable[[bytes], None]) -> None:
+        """
+        Not thread-safe.
+
+        """
+        self._data_subscribers.remove(subscriber)
 
     def connection_made(self, transport) -> None:
         self._transport = transport
@@ -73,11 +81,14 @@ class ConsoleConnection(asyncio.Protocol):
         if not data:
             return
 
-        for listener in self._listeners:
+        for subscriber in self._data_subscribers:
             try:
-                listener(data)
+                subscriber(data)
             except Exception:
-                LOG.exception(f"failed to feed data to listener {listener}")
+                LOG.exception(
+                    f"failed to send data {repr(data)} to subscriber "
+                    f"{subscriber}"
+                )
 
     def write_bytes(self, data: bytes) -> None:
         self._transport.write(data)
@@ -108,15 +119,19 @@ class ConsoleProxy:
         await self._server.wait_closed()
 
     def register_connection(self, connection: ConsoleConnection) -> None:
-        LOG.info(f"register console connection from {connection.peer}")
-        self._console_client.register_data_listener(connection.write_bytes)
-        connection.register_listener(self._console_client.write_bytes)
+        LOG.info(f"subscribe console connection to {connection.peer}")
+
+        self._console_client.subscribe_to_data(connection.write_bytes)
+        connection.subscribe_to_data(self._console_client.write_bytes)
+
         self._connections.append(connection)
 
     def unregister_connection(self, connection: ConsoleConnection) -> None:
-        LOG.info(f"unregister console connection from {connection.peer}")
-        self._console_client.unregister_data_listener(connection.write_bytes)
-        connection.unregister_listener(self._console_client.write_bytes)
+        LOG.info(f"unsubscribe console connection from {connection.peer}")
+
+        self._console_client.unsubscribe_from_data(connection.write_bytes)
+        connection.unsubscribe_from_data(self._console_client.write_bytes)
+
         self._connections.remove(connection)
 
     def exit(self) -> None:
