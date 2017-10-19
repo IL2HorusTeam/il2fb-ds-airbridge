@@ -5,8 +5,7 @@ import threading
 
 from typing import Callable
 
-from il2fb.parsers.events.events import Event
-from il2fb.parsers.events.exceptions import EventParsingError
+from il2fb.commons.events import Event, EventParsingException
 
 from il2fb.ds.airbridge.typing import EventOrNone, EventHandler
 from il2fb.ds.airbridge.typing import StringOrNoneProducer, StringHandler
@@ -15,7 +14,7 @@ from il2fb.ds.airbridge.typing import StringOrNoneProducer, StringHandler
 LOG = logging.getLogger(__name__)
 
 
-class EventLogWorker:
+class GameLogWorker:
 
     def __init__(
         self,
@@ -63,20 +62,20 @@ class EventLogWorker:
 
     def run(self) -> None:
         try:
-            LOG.info("event log worker has started")
+            LOG.info("game log worker has started")
             self._run()
         except Exception:
-            LOG.error("event log worker has terminated")
+            LOG.error("game log worker has terminated")
             raise
         else:
-            LOG.info("event log worker has finished")
+            LOG.info("game log worker has finished")
 
     def _run(self) -> None:
         while True:
             try:
                 string = self._string_producer()
             except Exception:
-                LOG.exception("failed to get event log string")
+                LOG.exception("failed to get game log string")
                 continue
 
             if string is None:
@@ -90,10 +89,10 @@ class EventLogWorker:
                 event = self._string_parser(string)
                 if event is not None:
                     self._handle_event(event)
-            except EventParsingError:
+            except EventParsingException:
                 self._handle_error(string)
             except Exception:
-                LOG.exception(f"failed to parse event log string `{string}`")
+                LOG.exception(f"failed to parse game log string `{string}`")
 
     def _handle_event(self, event: Event) -> None:
         with self._events_subscribers_lock:
@@ -102,7 +101,7 @@ class EventLogWorker:
                     subscriber(event)
                 except Exception:
                     LOG.exception(
-                        f"subscriber {subscriber} failed to handle log "
+                        f"subscriber {subscriber} failed to handle game log "
                         f"event {event}"
                     )
 
@@ -114,5 +113,5 @@ class EventLogWorker:
                 except Exception:
                     LOG.exception(
                         f"subscriber {subscriber} failed to handle invalid "
-                        f"event log string `{s}`"
+                        f"game log string `{s}`"
                     )
