@@ -46,7 +46,7 @@ class Airbridge:
         self._maybe_create_console_client_proxy()
         self._maybe_create_device_link_client_proxy()
 
-    def _maybe_create_console_client_proxy(self):
+    def _maybe_create_console_client_proxy(self) -> None:
         console_proxy_config = self._config.ds.console
         if console_proxy_config:
             self._console_proxy = ConsoleProxy(
@@ -57,7 +57,7 @@ class Airbridge:
             future = self._console_proxy.run()
             self._loop.create_task(future)
 
-    def _maybe_create_device_link_client_proxy(self):
+    def _maybe_create_device_link_client_proxy(self) -> None:
         device_link_proxy_config = self._config.ds.device_link
         if device_link_proxy_config:
             self._device_link_proxy = DeviceLinkProxy(
