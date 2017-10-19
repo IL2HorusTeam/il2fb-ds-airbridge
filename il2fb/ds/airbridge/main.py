@@ -213,7 +213,7 @@ def main():
         LOG.info("exit")
         raise SystemExit(0)
 
-    app.exit()
+    app.close()
     console_client.close()
     dl_client.close()
     ds.terminate()
@@ -223,7 +223,7 @@ def main():
         return_code = -1
 
     loop.run_until_complete(asyncio.gather(
-        app.wait_exit(),
+        app.wait_closed(),
         console_client.wait_closed(),
         dl_client.wait_closed(),
         loop=loop,

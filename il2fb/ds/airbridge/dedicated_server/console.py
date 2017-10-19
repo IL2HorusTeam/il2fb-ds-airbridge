@@ -134,10 +134,10 @@ class ConsoleProxy:
 
         self._connections.remove(connection)
 
-    def exit(self) -> None:
+    def close(self) -> None:
         if self._server:
             self._server.close()
 
-    async def wait_exit(self) -> Awaitable[None]:
+    async def wait_closed(self) -> Awaitable[None]:
         if self._server:
             await self._server.wait_closed()

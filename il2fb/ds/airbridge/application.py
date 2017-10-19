@@ -68,21 +68,21 @@ class Airbridge:
             future = self._device_link_proxy.run()
             self._device_link_proxy_task = self._loop.create_task(future)
 
-    def exit(self) -> None:
+    def close(self) -> None:
         if self._console_client_proxy:
-            self._console_client_proxy.exit()
+            self._console_client_proxy.close()
 
         if self._device_link_client_proxy:
-            self._device_link_client_proxy.exit()
+            self._device_link_client_proxy.close()
 
-    async def wait_exit(self) -> Awaitable[IntOrNone]:
+    async def wait_closed(self) -> Awaitable[IntOrNone]:
         awaitables = []
 
         if self._console_client_proxy:
-            awaitables.append(self._console_client_proxy.wait_exit())
+            awaitables.append(self._console_client_proxy.wait_closed())
 
         if self._device_link_client_proxy:
-            awaitables.append(self._device_link_client_proxy.wait_exit())
+            awaitables.append(self._device_link_client_proxy.wait_closed())
 
         if awaitables:
             await asyncio.gather(*awaitables, loop=self._loop)

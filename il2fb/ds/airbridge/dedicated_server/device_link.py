@@ -101,10 +101,10 @@ class DeviceLinkProxy:
         )
         await self._protocol.wait_closed()
 
-    def exit(self) -> None:
+    def close(self) -> None:
         if self._transport:
             self._transport.close()
 
-    async def wait_exit(self) -> Awaitable[None]:
+    async def wait_closed(self) -> Awaitable[None]:
         if self._protocol:
             await self._protocol.wait_closed()
