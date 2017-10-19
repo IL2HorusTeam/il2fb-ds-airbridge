@@ -5,7 +5,6 @@ import logging
 import threading
 import time
 
-from collections import namedtuple
 from pathlib import Path
 
 from ddict import DotAccessDict
