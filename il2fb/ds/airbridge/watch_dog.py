@@ -159,5 +159,6 @@ class TextFileWatchDog:
                     subscriber(s)
                 except Exception:
                     LOG.exception(
-                        f"subscriber {subscriber} failed to handle string {s}"
+                        f"subscriber {subscriber} failed to handle string "
+                        f"{repr(s)}"
                     )
