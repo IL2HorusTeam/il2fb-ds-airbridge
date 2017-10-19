@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Callable, Optional, List, Union
 
-from il2fb.parsers.events.events import Event
+from il2fb.commons.events import Event
 
 
 EventOrNone = Optional[Event]
