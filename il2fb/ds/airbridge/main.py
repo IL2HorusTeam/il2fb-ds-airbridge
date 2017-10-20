@@ -9,6 +9,7 @@ from typing import Awaitable
 
 import psutil
 
+from ddict import DotAccessDict
 from funcy import log_calls
 
 from il2fb.config.ds import ServerConfig
@@ -20,6 +21,7 @@ from il2fb.ds.airbridge.config import load_config
 from il2fb.ds.airbridge.dedicated_server.process import DedicatedServer
 from il2fb.ds.airbridge.exceptions import AirbridgeException
 from il2fb.ds.airbridge.logging import setup_logging
+from il2fb.ds.airbridge.state import track_persistent_state
 from il2fb.ds.airbridge.terminal import Terminal
 from il2fb.ds.airbridge.typing import StringHandler
 
@@ -154,12 +156,7 @@ def finish(
     raise SystemExit(0)
 
 
-def main():
-    args = load_args()
-    config = load_config(args.config_path)
-
-    setup_logging(config.logging)
-
+def run(config: ServerConfig, state: DotAccessDict) -> None:
     LOG.info("init application")
 
     loop = asyncio.get_event_loop()
@@ -242,6 +239,7 @@ def main():
     app = Airbridge(
         loop=loop,
         config=config,
+        state=state,
         dedicated_server=ds,
         console_client=console_client,
         device_link_client=dl_client,
@@ -262,6 +260,16 @@ def main():
         finish(loop, app, console_client, dl_client)
 
     terminate(loop, ds, app, console_client, dl_client)
+
+
+def main():
+    args = load_args()
+
+    config = load_config(args.config_path)
+    setup_logging(config.logging)
+
+    with track_persistent_state(config.state.file_path) as state:
+        run(config, state)
 
 
 if __name__ == '__main__':

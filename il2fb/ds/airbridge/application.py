@@ -28,12 +28,14 @@ class Airbridge:
         self,
         loop: asyncio.AbstractEventLoop,
         config: DotAccessDict,
+        state: DotAccessDict,
         dedicated_server: DedicatedServer,
         console_client: ConsoleClient,
         device_link_client: DeviceLinkClient,
     ):
         self._loop = loop
         self._config = config
+        self._state = state
 
         self._dedicated_server = dedicated_server
 
