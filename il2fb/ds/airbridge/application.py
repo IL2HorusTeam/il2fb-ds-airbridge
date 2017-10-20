@@ -34,6 +34,7 @@ class Airbridge:
     ):
         self._loop = loop
         self._config = config
+
         self._dedicated_server = dedicated_server
 
         self._console_client = console_client
@@ -42,49 +43,45 @@ class Airbridge:
         self._device_link_client = device_link_client
         self._device_link_client_proxy = None
 
-    async def run(self) -> Awaitable[None]:
-        self._maybe_create_console_client_proxy()
-        self._maybe_create_device_link_client_proxy()
+    async def start(self) -> Awaitable[None]:
+        await self._maybe_create_console_client_proxy()
+        await self._maybe_create_device_link_client_proxy()
 
-        await self.wait_closed()
-
-    def _maybe_create_console_client_proxy(self) -> None:
+    async def _maybe_create_console_client_proxy(self) -> None:
         console_proxy_config = self._config.ds.console_proxy
         if console_proxy_config:
-            self._console_proxy = ConsoleProxy(
+            self._console_client_proxy = ConsoleProxy(
                 loop=self._loop,
                 config=console_proxy_config,
                 console_client=self._console_client,
             )
-            future = self._console_proxy.run()
-            self._loop.create_task(future)
+            await self._console_client_proxy.start()
 
-    def _maybe_create_device_link_client_proxy(self) -> None:
+    async def _maybe_create_device_link_client_proxy(self) -> None:
         device_link_proxy_config = self._config.ds.device_link_proxy
         if device_link_proxy_config:
-            self._device_link_proxy = DeviceLinkProxy(
+            self._device_link_client_proxy = DeviceLinkProxy(
                 loop=self._loop,
                 config=device_link_proxy_config,
                 device_link_client=self._device_link_client,
             )
-            future = self._device_link_proxy.run()
-            self._device_link_proxy_task = self._loop.create_task(future)
+            await self._device_link_client_proxy.start()
 
-    def close(self) -> None:
+    def stop(self) -> None:
         if self._console_client_proxy:
-            self._console_client_proxy.close()
+            self._console_client_proxy.stop()
 
         if self._device_link_client_proxy:
-            self._device_link_client_proxy.close()
+            self._device_link_client_proxy.stop()
 
-    async def wait_closed(self) -> Awaitable[IntOrNone]:
+    async def wait_stopped(self) -> Awaitable[IntOrNone]:
         awaitables = []
 
         if self._console_client_proxy:
-            awaitables.append(self._console_client_proxy.wait_closed())
+            awaitables.append(self._console_client_proxy.wait_stopped())
 
         if self._device_link_client_proxy:
-            awaitables.append(self._device_link_client_proxy.wait_closed())
+            awaitables.append(self._device_link_client_proxy.wait_stopped())
 
         if awaitables:
             await asyncio.gather(*awaitables, loop=self._loop)

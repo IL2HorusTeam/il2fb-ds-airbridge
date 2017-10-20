@@ -210,16 +210,18 @@ class DedicatedServer:
         self._loop = loop
         self.exe_path = _try_to_normalize_exe_path(exe_path)
         self.root_dir = self.exe_path.parent
-        self.config_path = _try_to_normalize_config_path(
-            root_dir=self.root_dir,
-            initial=config_path,
-        )
-        self.config = _try_to_load_config(self.config_path)
         self.start_script_path = _try_to_normalize_start_script_path(
             root_dir=self.root_dir,
             initial=start_script_path,
         )
         self._wine_bin_path = wine_bin_path
+
+        self.config_path = _try_to_normalize_config_path(
+            root_dir=self.root_dir,
+            initial=config_path,
+        )
+        self.config = _try_to_load_config(self.config_path)
+
         self._stdout_handler = (
             functools.partial(_try_to_handle_string, stdout_handler)
             if stdout_handler
@@ -235,75 +237,28 @@ class DedicatedServer:
             if prompt_handler
             else None
         )
+
         self._process = None
-        self._start_future = asyncio.Future()
+        self._stream_handling_tasks = []
 
     @property
-    def pid(self):
+    def pid(self) -> IntOrNone:
         return self._process and self._process.pid
 
-    async def run(self) -> Awaitable:
+    async def start(self) -> Awaitable[None]:
         try:
-            stream_tasks = await self._start()
+            await self._spawn_process()
+            self._maybe_setup_stderr_handler()
+            await self._wait_started()
+            self._maybe_setup_stdout_handler()
         except Exception as e:
             if self._process:
                 self._process.kill()
                 await self._process.wait()
 
-            self._start_future.set_exception(e)
             raise e
 
-        self._start_future.set_result(None)
-
-        if stream_tasks:
-            await asyncio.gather(*stream_tasks)
-
-        return (await self.wait_for_exit())
-
-    async def _start(self) -> Awaitable[List[asyncio.Task]]:
-        tasks = []
-
-        await self._spawn_process()
-
-        if self._stderr_handler:
-            stream_task = self._loop.create_task(_read_stream_until_end(
-                stream=self._process.stderr,
-                stream_name="STDERR",
-                output_handler=self._stderr_handler,
-            ))
-            tasks.append(stream_task)
-        else:
-            self._process.stderr.close()
-
-        input_line = "host\n"
-        stop_line = "localhost: Server\n"
-
-        boot_task = self._loop.create_task(_read_stream_until_line(
-            stream=self._process.stdout,
-            stream_name="STDOUT",
-            input_line=input_line,
-            stop_line=stop_line,
-            output_handler=self._stdout_handler,
-            prompt_handler=self._prompt_handler,
-        ))
-
-        await self.input(input_line)
-        await boot_task
-
-        if self._stdout_handler:
-            stream_task = self._loop.create_task(_read_stream_until_end(
-                stream=self._process.stdout,
-                stream_name="STDOUT",
-                output_handler=self._stdout_handler,
-                prompt_handler=self._prompt_handler,
-            ))
-            tasks.append(stream_task)
-        else:
-            self._process.stdout.close()
-
-        return tasks
-
-    async def _spawn_process(self) -> Awaitable:
+    async def _spawn_process(self) -> Awaitable[None]:
         args = (
             []
             if IS_WINDOWS
@@ -321,16 +276,56 @@ class DedicatedServer:
             stderr=asyncio.subprocess.PIPE,
         )
 
-    def wait_for_start(self) -> Awaitable:
-        return self._start_future
+    def _maybe_setup_stderr_handler(self):
+        if self._stderr_handler:
+            stream_task = self._loop.create_task(_read_stream_until_end(
+                stream=self._process.stderr,
+                stream_name="STDERR",
+                output_handler=self._stderr_handler,
+            ))
+            self._stream_handling_tasks.append(stream_task)
+        else:
+            self._process.stderr.close()
 
-    def terminate(self) -> None:
+    def _maybe_setup_stdout_handler(self):
+        if self._stdout_handler:
+            stream_task = self._loop.create_task(_read_stream_until_end(
+                stream=self._process.stdout,
+                stream_name="STDOUT",
+                output_handler=self._stdout_handler,
+                prompt_handler=self._prompt_handler,
+            ))
+            self._stream_handling_tasks.append(stream_task)
+        else:
+            self._process.stdout.close()
+
+    async def _wait_started(self) -> Awaitable[List[asyncio.Task]]:
+        input_line = "host\n"
+        stop_line = "localhost: Server\n"
+
+        boot_task = self._loop.create_task(_read_stream_until_line(
+            stream=self._process.stdout,
+            stream_name="STDOUT",
+            input_line=input_line,
+            stop_line=stop_line,
+            output_handler=self._stdout_handler,
+            prompt_handler=self._prompt_handler,
+        ))
+
+        await self.input(input_line)
+        await boot_task
+
+    def stop(self) -> None:
         if self._process and self._process.returncode is None:
             self._process.terminate()
 
-    async def wait_for_exit(self) -> Awaitable[IntOrNone]:
+    async def wait_stopped(self) -> Awaitable[IntOrNone]:
+        if self._stream_handling_tasks:
+            await asyncio.gather(*self._stream_handling_tasks)
+
         if self._process:
-            return (await self._process.wait())
+            return_code = await self._process.wait()
+            return return_code
 
     async def input(self, s: str) -> Awaitable[None]:
         self._process.stdin.write(s.encode())

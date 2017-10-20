@@ -101,9 +101,57 @@ async def wait_for_dedicated_server_ports(
     raise RuntimeError("expected ports of dedicated server are closed")
 
 
-def abort(exit_code=-1):
-    LOG.fatal("terminate")
+def abort(exit_code: int=-1):
+    LOG.fatal("abort")
     raise SystemExit(exit_code)
+
+
+def terminate(
+    loop: asyncio.AbstractEventLoop,
+    ds: DedicatedServer,
+    app: Airbridge,
+    console_client: ConsoleClient,
+    dl_client: DeviceLinkClient,
+):
+    app.stop()
+    console_client.close()
+    dl_client.close()
+    ds.stop()
+
+    return_code = loop.run_until_complete(ds.wait_stopped())
+    if return_code is None:
+        return_code = -1
+
+    loop.run_until_complete(asyncio.gather(
+        app.wait_stopped(),
+        console_client.wait_closed(),
+        dl_client.wait_closed(),
+        loop=loop,
+    ))
+
+    LOG.fatal("terminate")
+    raise SystemExit(return_code)
+
+
+def finish(
+    loop: asyncio.AbstractEventLoop,
+    app: Airbridge,
+    console_client: ConsoleClient,
+    dl_client: DeviceLinkClient,
+):
+    app.stop()
+    console_client.close()
+    dl_client.close()
+
+    loop.run_until_complete(asyncio.gather(
+        app.wait_stopped(),
+        console_client.wait_closed(),
+        dl_client.wait_closed(),
+        loop=loop,
+    ))
+
+    LOG.info("exit")
+    raise SystemExit(0)
 
 
 def main():
@@ -138,14 +186,14 @@ def main():
         LOG.fatal(e)
         abort()
 
-    ds_task = loop.create_task(ds.run())
+    ds_start_task = loop.create_task(ds.start())
 
     LOG.info("wait for server to start")
 
     try:
-        loop.run_until_complete(ds.wait_for_start())
+        loop.run_until_complete(ds_start_task)
     except Exception:
-        ds_task.cancel()
+        ds_start_task.cancel()
         LOG.fatal("failed to start dedicated server", exc_info=True)
         abort()
 
@@ -154,8 +202,8 @@ def main():
         loop.run_until_complete(future)
     except Exception as e:
         LOG.fatal(e)
-        ds.terminate()
-        loop.run_until_complete(ds_task)
+        ds.stop()
+        loop.run_until_complete(ds.wait_stopped())
         abort()
 
     LOG.info("start input handler")
@@ -198,11 +246,12 @@ def main():
         console_client=console_client,
         device_link_client=dl_client,
     )
-    app_task = loop.create_task(app.run())
+    app_start_task = loop.create_task(app.start())
+    loop.run_until_complete(app_start_task)
 
     try:
-        LOG.info("run application")
-        loop.run_until_complete(asyncio.gather(ds_task, app_task, loop=loop))
+        LOG.info("run")
+        loop.run_until_complete(ds.wait_stopped())
     except KeyboardInterrupt:
         LOG.warning("interrupted by user")
     except AirbridgeException:
@@ -210,25 +259,9 @@ def main():
     except Exception:
         LOG.fatal("fatal error has occured", exc_info=True)
     else:
-        LOG.info("exit")
-        raise SystemExit(0)
+        finish(loop, app, console_client, dl_client)
 
-    app.close()
-    console_client.close()
-    dl_client.close()
-    ds.terminate()
-
-    return_code = loop.run_until_complete(ds.wait_for_exit())
-    if return_code is None:
-        return_code = -1
-
-    loop.run_until_complete(asyncio.gather(
-        app.wait_closed(),
-        console_client.wait_closed(),
-        dl_client.wait_closed(),
-        loop=loop,
-    ))
-    abort(return_code)
+    terminate(loop, ds, app, console_client, dl_client)
 
 
 if __name__ == '__main__':

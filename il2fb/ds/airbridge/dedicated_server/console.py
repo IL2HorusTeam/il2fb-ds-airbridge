@@ -110,13 +110,12 @@ class ConsoleProxy:
         self._server = None
         self._connections = []
 
-    async def run(self) -> Awaitable[None]:
+    async def start(self) -> Awaitable[None]:
         self._server = await self._loop.create_server(
             lambda: ConsoleConnection(loop=self._loop, registry=self),
             (self._config.bind.address or "localhost"),
             self._config.bind.port,
         )
-        await self._server.wait_closed()
 
     def register_connection(self, connection: ConsoleConnection) -> None:
         LOG.info(f"subscribe console connection to {connection.peer}")
@@ -134,10 +133,10 @@ class ConsoleProxy:
 
         self._connections.remove(connection)
 
-    def close(self) -> None:
+    def stop(self) -> None:
         if self._server:
             self._server.close()
 
-    async def wait_closed(self) -> Awaitable[None]:
+    async def wait_stopped(self) -> Awaitable[None]:
         if self._server:
             await self._server.wait_closed()

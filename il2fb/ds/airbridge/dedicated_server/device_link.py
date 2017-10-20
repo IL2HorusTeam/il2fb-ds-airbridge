@@ -89,7 +89,7 @@ class DeviceLinkProxy:
         self._transport = None
         self._protocol = None
 
-    async def run(self) -> Awaitable[None]:
+    async def start(self) -> Awaitable[None]:
         loop = self._loop
 
         address = self._config.bind.address or "localhost"
@@ -99,12 +99,11 @@ class DeviceLinkProxy:
             lambda: DatagramProtocol(loop, self._device_link_client),
             local_addr=(address, port),
         )
-        await self._protocol.wait_closed()
 
-    def close(self) -> None:
+    def stop(self) -> None:
         if self._transport:
             self._transport.close()
 
-    async def wait_closed(self) -> Awaitable[None]:
+    async def wait_stopped(self) -> Awaitable[None]:
         if self._protocol:
             await self._protocol.wait_closed()
