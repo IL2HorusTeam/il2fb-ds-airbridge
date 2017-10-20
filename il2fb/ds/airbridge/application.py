@@ -46,6 +46,8 @@ class Airbridge:
         self._maybe_create_console_client_proxy()
         self._maybe_create_device_link_client_proxy()
 
+        await self.wait_closed()
+
     def _maybe_create_console_client_proxy(self) -> None:
         console_proxy_config = self._config.ds.console_proxy
         if console_proxy_config:
