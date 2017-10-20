@@ -25,7 +25,7 @@ CONFIG_SCHEMA = {
                 'start_script_path': {
                     'type': 'string',
                 },
-                'console': {
+                'console_proxy': {
                     'type': 'object',
                     'properties': {
                         'bind': {
@@ -43,7 +43,7 @@ CONFIG_SCHEMA = {
                     },
                     'required': ['bind', ],
                 },
-                'device_link': {
+                'device_link_proxy': {
                     'type': 'object',
                     'properties': {
                         'bind': {
