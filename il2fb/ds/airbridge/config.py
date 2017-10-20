@@ -128,8 +128,17 @@ CONFIG_SCHEMA = {
         'wine_bin_path': {
             'type': 'string',
         },
+        'state': {
+            'type': 'object',
+            'properties': {
+                'file_path': {
+                    'type': 'string',
+                },
+            },
+            'required': ['file_path', ],
+        },
     },
-    'required': ['ds', 'wine_bin_path', ],
+    'required': ['ds', 'wine_bin_path', 'state', ],
 }
 
 
@@ -158,6 +167,9 @@ CONFIG_DEFAULTS = {
         },
     },
     'wine_bin_path': 'wine',
+    'state': {
+        'file_path': 'airbridge.state',
+    },
 }
 
 
