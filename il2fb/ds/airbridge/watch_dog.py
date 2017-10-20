@@ -50,14 +50,6 @@ class TextFileWatchDog:
         self._subscribers = []
         self._subscribers_lock = threading.Lock()
 
-    @property
-    def state(self):
-        """
-        Warning: not thread-safe.
-
-        """
-        return self._state
-
     def subscribe(self, subscriber: StringHandler) -> None:
         with self._subscribers_lock:
             self._subscribers.append(subscriber)
