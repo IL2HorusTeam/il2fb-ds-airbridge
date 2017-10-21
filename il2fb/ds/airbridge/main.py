@@ -9,8 +9,8 @@ from typing import Awaitable
 
 import psutil
 
+from autologging import traced
 from ddict import DotAccessDict
-from funcy import log_calls
 
 from il2fb.config.ds import ServerConfig
 from il2fb.ds.middleware.console.client import ConsoleClient
@@ -72,7 +72,7 @@ def validate_dedicated_server_config(config: ServerConfig) -> None:
         )
 
 
-@log_calls(LOG.debug, errors=False)
+@traced(LOG)
 async def wait_for_dedicated_server_ports(
     loop: asyncio.AbstractEventLoop,
     pid: int,
