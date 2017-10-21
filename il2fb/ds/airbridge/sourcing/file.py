@@ -17,6 +17,7 @@ class FileSink:
         self._open_stream()
 
     def _open_stream(self):
+        self._path.parent.mkdir(parents=True, exist_ok=True)
         self._stream = self._path.open('a', buffering=1)
         self._stat = self._path.lstat()
 
