@@ -1,6 +1,9 @@
 # coding: utf-8
 
+import json
+
 from pathlib import Path
+from typing import Any
 
 from il2fb.ds.airbridge.typing import StringOrPath
 
@@ -41,3 +44,10 @@ class FileSink:
             self._stream.flush()
         finally:
             self._stream.close()
+
+
+class JSONFileSink(FileSink):
+
+    def write(self, o: Any) -> None:
+        s = json.dumps(o)
+        super().write(s)
