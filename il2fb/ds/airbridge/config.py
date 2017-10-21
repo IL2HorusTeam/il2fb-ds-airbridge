@@ -137,6 +137,53 @@ CONFIG_SCHEMA = {
             },
             'required': ['file_path', ],
         },
+        'sourcing': {
+            'type': 'object',
+            'properties': {
+                'chat': {
+                    'type': 'object',
+                    'properties': {
+                        'file': {
+                            'type': 'object',
+                            'properties': {
+                                'path': {
+                                    'type': 'string',
+                                },
+                            },
+                            'required': ['path', ],
+                        },
+                    },
+                },
+                'events': {
+                    'type': 'object',
+                    'properties': {
+                        'file': {
+                            'type': 'object',
+                            'properties': {
+                                'path': {
+                                    'type': 'string',
+                                },
+                            },
+                            'required': ['path', ],
+                        },
+                    },
+                },
+                'not_parsed_events': {
+                    'type': 'object',
+                    'properties': {
+                        'file': {
+                            'type': 'object',
+                            'properties': {
+                                'path': {
+                                    'type': 'string',
+                                },
+                            },
+                            'required': ['path', ],
+                        },
+                    },
+                },
+            },
+        },
     },
     'required': ['ds', 'wine_bin_path', 'state', ],
 }
