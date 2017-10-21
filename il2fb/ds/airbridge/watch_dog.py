@@ -6,6 +6,7 @@ import threading
 import time
 
 from pathlib import Path
+from os import stat_result
 
 from ddict import DotAccessDict
 
@@ -78,22 +79,28 @@ class TextFileWatchDog:
             self._clear_state()
             self._wait_for_file_to_get_created()
 
-        if self._state.inode is None:
-            self._state.inode = self._get_actual_inode()
+        if (self._state.device is None) or (self._state.inode is None):
+            stat = self._get_actual_stat()
+            self._state.device = stat.st_dev
+            self._state.inode = stat.st_ino
 
         with self._path.open(buffering=1) as f:
             f.seek(self._state.offset)
             self._read_lines(f)
 
     def _reset_state_if_file_was_recreated(self):
-        inode = self._get_actual_inode()
+        stat = self._get_actual_stat()
 
-        if self._state.inode != inode:
-            self._state.inode = inode
+        if (
+            (self._state.device != stat.st_dev) or
+            (self._state.inode != stat.st_ino)
+        ):
+            self._state.device = stat.st_dev
+            self._state.inode = stat.st_ino
             self._state.offset = 0
 
-
     def _clear_state(self):
+        self._state.device = None
         self._state.inode = None
         self._state.offset = 0
 
@@ -119,15 +126,18 @@ class TextFileWatchDog:
             raise FileNotFoundError
 
     def _file_is_still_the_same(self) -> bool:
-        inode = self._get_actual_inode()
-        return (self._state.inode == inode)
+        stat = self._get_actual_stat()
+        return (
+            (self._state.device == stat.st_dev) and
+            (self._state.inode == stat.st_ino)
+        )
 
-    def _get_actual_inode(self) -> int:
+    def _get_actual_stat(self) -> stat_result:
         """
         Can raise FileNotFoundError if file does not exist.
 
         """
-        return self._path.lstat().st_ino
+        return self._path.lstat()
 
     def _sleep_and_maybe_stop(self) -> None:
         time.sleep(self._polling_period)
