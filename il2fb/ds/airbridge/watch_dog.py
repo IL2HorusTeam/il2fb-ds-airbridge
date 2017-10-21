@@ -60,7 +60,7 @@ class TextFileWatchDog:
 
     def stop(self) -> None:
         with self._stop_lock:
-            self._do_stop = False
+            self._do_stop = True
 
     def run(self) -> None:
         try:
