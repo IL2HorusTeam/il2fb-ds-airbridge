@@ -7,7 +7,7 @@ from typing import Callable
 
 from il2fb.commons.events import Event, EventParsingException
 
-from il2fb.ds.airbridge.typing import EventOrNone, EventHandler
+from il2fb.ds.airbridge.typing import EventHandler
 from il2fb.ds.airbridge.typing import StringOrNoneProducer, StringHandler
 
 
@@ -19,7 +19,7 @@ class GameLogWorker:
     def __init__(
         self,
         string_producer: StringOrNoneProducer,
-        string_parser: Callable[[str], EventOrNone],
+        string_parser: Callable[[str], Event],
     ):
         self._string_producer = string_producer
         self._string_parser = string_parser
