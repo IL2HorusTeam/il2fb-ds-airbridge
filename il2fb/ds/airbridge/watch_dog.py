@@ -19,30 +19,17 @@ class StopWatchDog(Exception):
     pass
 
 
-class TextFileWatchDogState(DotAccessDict):
-
-    def __init__(self, inode: IntOrNone=None, offset: int=0):
-        super().__init__(
-            inode=inode,
-            offset=offset,
-        )
-
-    def clear(self) -> None:
-        self.inode = None
-        self.offset = 0
-
-
 class TextFileWatchDog:
 
     def __init__(
         self,
         path: StringOrPath,
+        state: DotAccessDict=None,
         polling_period: float=0.5,
-        state: TextFileWatchDogState=None,
     ):
         self._path = path if isinstance(path, Path) else Path(path)
+        self._state = state if state is not None else DotAccessDict()
         self._polling_period = polling_period
-        self._state = state or TextFileWatchDogState()
 
         self._do_stop = False
         self._stop_lock = threading.Lock()
@@ -81,14 +68,14 @@ class TextFileWatchDog:
             try:
                 self._try_to_run()
             except FileNotFoundError:
-                self._state.clear()
+                self._clear_state()
                 continue
 
     def _try_to_run(self) -> None:
         if self._path.exists():
             self._reset_state_if_file_was_recreated()
         else:
-            self._state.clear()
+            self._clear_state()
             self._wait_for_file_to_get_created()
 
         if self._state.inode is None:
@@ -104,6 +91,11 @@ class TextFileWatchDog:
         if self._state.inode != inode:
             self._state.inode = inode
             self._state.offset = 0
+
+
+    def _clear_state(self):
+        self._state.inode = None
+        self._state.offset = 0
 
     def _wait_for_file_to_get_created(self):
         while not self._path.exists():
