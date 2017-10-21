@@ -19,6 +19,7 @@ from il2fb.ds.middleware.device_link.client import DeviceLinkClient
 from il2fb.ds.airbridge.application import Airbridge
 from il2fb.ds.airbridge.config import load_config
 from il2fb.ds.airbridge.dedicated_server.process import DedicatedServer
+from il2fb.ds.airbridge.dedicated_server.validators import validate_dedicated_server_config
 from il2fb.ds.airbridge.exceptions import AirbridgeException
 from il2fb.ds.airbridge.logging import setup_logging
 from il2fb.ds.airbridge.state import track_persistent_state
@@ -56,20 +57,6 @@ def make_thread_safe_string_handler(
         asyncio.run_coroutine_threadsafe(handler(s), loop)
 
     return thread_safe_handler
-
-
-def validate_dedicated_server_config(config: ServerConfig) -> None:
-    if not config.console.connection.port:
-        raise ValueError(
-            "server's console is disabled, please configure it to proceed "
-            "(see: https://github.com/IL2HorusTeam/il2fb-ds-config#console-section)"
-        )
-
-    if not config.device_link.connection.port:
-        raise ValueError(
-            "server's device link is disabled, please configure it to proceed "
-            "(see: https://github.com/IL2HorusTeam/il2fb-ds-config#devicelink-section)"
-        )
 
 
 @traced(LOG)
