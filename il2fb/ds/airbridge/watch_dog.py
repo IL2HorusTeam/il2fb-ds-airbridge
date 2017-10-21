@@ -59,17 +59,19 @@ class TextFileWatchDog:
             self._subscribers.remove(subscriber)
 
     def stop(self) -> None:
+        LOG.debug(f"ask watch dog for text file `{self._path}` to stop")
+
         with self._stop_lock:
             self._do_stop = True
 
     def run(self) -> None:
         try:
-            LOG.info(f"watch dog for text file `{self._path}` has started")
+            LOG.info(f"watch dog for text file `{self._path}` was started")
             self._run_with_retries()
         except StopWatchDog:
-            LOG.info(f"watch dog for text file `{self._path}` has stopped")
+            LOG.info(f"watch dog for text file `{self._path}` was stopped")
         except Exception:
-            LOG.error(f"watch dog for text file `{self._path}` has terminated")
+            LOG.error(f"watch dog for text file `{self._path}` was terminated")
             raise
 
     def _run_with_retries(self) -> None:
