@@ -3,17 +3,19 @@
 import asyncio
 import logging
 import threading
+import queue
 
 from pathlib import Path
 from typing import Awaitable, Callable
 
 from ddict import DotAccessDict
-
 from il2fb.ds.middleware.console.client import ConsoleClient
 from il2fb.ds.middleware.device_link.client import DeviceLinkClient
+from il2fb.parsers.game_log.parsers import GameLogEventParser
 
 from il2fb.ds.airbridge.dedicated_server.console import ConsoleProxy
 from il2fb.ds.airbridge.dedicated_server.device_link import DeviceLinkProxy
+from il2fb.ds.airbridge.dedicated_server.game_log import GameLogWorker
 from il2fb.ds.airbridge.dedicated_server.process import DedicatedServer
 from il2fb.ds.airbridge.typing import IntOrNone, StringHandler
 from il2fb.ds.airbridge.watch_dog import TextFileWatchDog
@@ -48,6 +50,12 @@ class Airbridge:
         self._game_log_watch_dog = None
         self._game_log_watch_dog_thread = None
 
+        self._game_log_worker = None
+        self._game_log_worker_thread = None
+
+        self._game_log_line_queue = queue.Queue()
+        self._game_log_event_parser = GameLogEventParser()
+
     async def start(self) -> Awaitable[None]:
         await self._maybe_start_console_client_proxy()
         await self._maybe_start_device_link_client_proxy()
@@ -74,6 +82,21 @@ class Airbridge:
             await self._device_link_client_proxy.start()
 
     def _start_game_log_processing(self):
+        self._start_game_log_worker()
+        self._start_game_log_watch_dog()
+
+    def _start_game_log_worker(self):
+        self._game_log_worker = GameLogWorker(
+            string_producer=self._game_log_line_queue.get,
+            string_parser=self._game_log_event_parser.parse,
+        )
+        self._game_log_worker_thread = threading.Thread(
+            target=self._game_log_worker.run,
+            daemon=True,
+        )
+        self._game_log_worker_thread.start()
+
+    def _start_game_log_watch_dog(self):
         file_path = Path(self._dedicated_server.config.events.logging.file_name)
 
         if not file_path.is_absolute():
@@ -84,6 +107,9 @@ class Airbridge:
         self._game_log_watch_dog = TextFileWatchDog(
             path=file_path,
             state=self._state.game_log_watch_dog,
+        )
+        self._game_log_watch_dog.subscribe(
+            subscriber=self._game_log_line_queue.put_nowait,
         )
         self._game_log_watch_dog_thread = threading.Thread(
             target=self._game_log_watch_dog.run,
@@ -115,3 +141,8 @@ class Airbridge:
 
         if self._game_log_watch_dog_thread:
             self._game_log_watch_dog_thread.join()
+
+        if self._game_log_worker_thread:
+            self._game_log_worker.stop()
+            self._game_log_line_queue.put_nowait(None)
+            self._game_log_worker_thread.join()
