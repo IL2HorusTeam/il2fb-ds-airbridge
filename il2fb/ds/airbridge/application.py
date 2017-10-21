@@ -2,7 +2,9 @@
 
 import asyncio
 import logging
+import threading
 
+from pathlib import Path
 from typing import Awaitable, Callable
 
 from ddict import DotAccessDict
@@ -14,6 +16,7 @@ from il2fb.ds.airbridge.dedicated_server.console import ConsoleProxy
 from il2fb.ds.airbridge.dedicated_server.device_link import DeviceLinkProxy
 from il2fb.ds.airbridge.dedicated_server.process import DedicatedServer
 from il2fb.ds.airbridge.typing import IntOrNone
+from il2fb.ds.airbridge.watch_dog import TextFileWatchDog
 
 
 LOG = logging.getLogger(__name__)
@@ -45,11 +48,15 @@ class Airbridge:
         self._device_link_client = device_link_client
         self._device_link_client_proxy = None
 
-    async def start(self) -> Awaitable[None]:
-        await self._maybe_create_console_client_proxy()
-        await self._maybe_create_device_link_client_proxy()
+        self._game_log_watch_dog = None
+        self._game_log_watch_dog_thread = None
 
-    async def _maybe_create_console_client_proxy(self) -> None:
+    async def start(self) -> Awaitable[None]:
+        await self._maybe_start_console_client_proxy()
+        await self._maybe_start_device_link_client_proxy()
+        self._start_game_log_processing()
+
+    async def _maybe_start_console_client_proxy(self) -> None:
         console_proxy_config = self._config.ds.console_proxy
         if console_proxy_config:
             self._console_client_proxy = ConsoleProxy(
@@ -59,7 +66,7 @@ class Airbridge:
             )
             await self._console_client_proxy.start()
 
-    async def _maybe_create_device_link_client_proxy(self) -> None:
+    async def _maybe_start_device_link_client_proxy(self) -> None:
         device_link_proxy_config = self._config.ds.device_link_proxy
         if device_link_proxy_config:
             self._device_link_client_proxy = DeviceLinkProxy(
@@ -69,12 +76,33 @@ class Airbridge:
             )
             await self._device_link_client_proxy.start()
 
+    def _start_game_log_processing(self):
+        file_path = Path(self._dedicated_server.config.events.logging.file_name)
+
+        if not file_path.is_absolute():
+            file_path = self._dedicated_server.root_dir / file_path
+
+        file_path = file_path.absolute()
+
+        self._game_log_watch_dog = TextFileWatchDog(
+            path=file_path,
+            state=self._state.game_log_watch_dog,
+        )
+        self._game_log_watch_dog_thread = threading.Thread(
+            target=self._game_log_watch_dog.run,
+            daemon=True,
+        )
+        self._game_log_watch_dog_thread.start()
+
     def stop(self) -> None:
         if self._console_client_proxy:
             self._console_client_proxy.stop()
 
         if self._device_link_client_proxy:
             self._device_link_client_proxy.stop()
+
+        if self._game_log_watch_dog:
+            self._game_log_watch_dog.stop()
 
     async def wait_stopped(self) -> Awaitable[IntOrNone]:
         awaitables = []
@@ -87,3 +115,6 @@ class Airbridge:
 
         if awaitables:
             await asyncio.gather(*awaitables, loop=self._loop)
+
+        if self._game_log_watch_dog_thread:
+            self._game_log_watch_dog_thread.join()
