@@ -15,14 +15,11 @@ from il2fb.ds.middleware.device_link.client import DeviceLinkClient
 from il2fb.ds.airbridge.dedicated_server.console import ConsoleProxy
 from il2fb.ds.airbridge.dedicated_server.device_link import DeviceLinkProxy
 from il2fb.ds.airbridge.dedicated_server.process import DedicatedServer
-from il2fb.ds.airbridge.typing import IntOrNone
+from il2fb.ds.airbridge.typing import IntOrNone, StringHandler
 from il2fb.ds.airbridge.watch_dog import TextFileWatchDog
 
 
 LOG = logging.getLogger(__name__)
-
-
-StringHandler = Callable[[str], None]
 
 
 class Airbridge:
