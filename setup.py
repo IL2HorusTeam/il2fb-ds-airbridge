@@ -92,6 +92,7 @@ setup(
     packages=[
         "il2fb.ds.airbridge",
         "il2fb.ds.airbridge.dedicated_server",
+        "il2fb.ds.airbridge.sourcing",
     ],
     namespace_packages=[
         "il2fb",
