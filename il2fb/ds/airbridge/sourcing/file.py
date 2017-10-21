@@ -1,10 +1,9 @@
 # coding: utf-8
 
-import json
-
 from pathlib import Path
 from typing import Any
 
+from il2fb.ds.airbridge import json
 from il2fb.ds.airbridge.typing import StringOrPath
 
 
