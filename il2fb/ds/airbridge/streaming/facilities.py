@@ -12,8 +12,8 @@ from il2fb.ds.middleware.console.events import ChatMessageWasReceived
 from il2fb.parsers.game_log import events as game_log_events
 
 from il2fb.ds.airbridge.dedicated_server.game_log import GameLogWorker
-from il2fb.ds.airbridge.structures import TimestampedItem
-from il2fb.ds.airbridge.typing import AsyncTimestampedItemHandler
+from il2fb.ds.airbridge.structures import TimestampedData
+from il2fb.ds.airbridge.typing import AsyncTimestampedDataHandler
 
 
 class ChatStreamingFacility:
@@ -34,7 +34,7 @@ class ChatStreamingFacility:
 
     async def subscribe(
         self,
-        subscriber: AsyncTimestampedItemHandler,
+        subscriber: AsyncTimestampedDataHandler,
     ) -> Awaitable[None]:
         with await self._subscribers_lock:
             if not self._subscribers:
@@ -45,7 +45,7 @@ class ChatStreamingFacility:
 
     async def unsubscribe(
         self,
-        subscriber: AsyncTimestampedItemHandler,
+        subscriber: AsyncTimestampedDataHandler,
     ) -> Awaitable[None]:
         with await self._subscribers_lock:
             self._subscribers.remove(subscriber)
@@ -55,7 +55,7 @@ class ChatStreamingFacility:
                 )
 
     def _consume(self, event: ChatMessageWasReceived) -> None:
-        item = TimestampedItem(event)
+        item = TimestampedData(event)
         self._queue.put_nowait(item)
 
     def start(self):
@@ -110,7 +110,7 @@ class EventsStreamingFacility:
 
     async def subscribe(
         self,
-        subscriber: AsyncTimestampedItemHandler,
+        subscriber: AsyncTimestampedDataHandler,
     ) -> Awaitable[None]:
         with await self._subscribers_lock:
             if not self._subscribers:
@@ -124,7 +124,7 @@ class EventsStreamingFacility:
 
     async def unsubscribe(
         self,
-        subscriber: AsyncTimestampedItemHandler,
+        subscriber: AsyncTimestampedDataHandler,
     ) -> Awaitable[None]:
         with await self._subscribers_lock:
             self._subscribers.remove(subscriber)
@@ -137,7 +137,7 @@ class EventsStreamingFacility:
                 )
 
     def _consume_human_connection_event(self, event: Event) -> None:
-        item = TimestampedItem(event)
+        item = TimestampedData(event)
         self._queue.async_q.put_nowait(item)
 
     def _consume_game_log_event(self, event: Event) -> None:
@@ -148,7 +148,7 @@ class EventsStreamingFacility:
         if isinstance(event, ignored_events):
             return
 
-        item = TimestampedItem(event)
+        item = TimestampedData(event)
         self._queue.sync_q.put_nowait(item)
 
     def start(self):
@@ -200,7 +200,7 @@ class NotParsedStringsStreamingFacility:
 
     async def subscribe(
         self,
-        subscriber: AsyncTimestampedItemHandler,
+        subscriber: AsyncTimestampedDataHandler,
     ) -> Awaitable[None]:
         with await self._subscribers_lock:
             if not self._subscribers:
@@ -211,7 +211,7 @@ class NotParsedStringsStreamingFacility:
 
     async def unsubscribe(
         self,
-        subscriber: AsyncTimestampedItemHandler,
+        subscriber: AsyncTimestampedDataHandler,
     ) -> Awaitable[None]:
         with await self._subscribers_lock:
             self._subscribers.remove(subscriber)
@@ -221,7 +221,7 @@ class NotParsedStringsStreamingFacility:
                 )
 
     def _consume(self, s: str) -> None:
-        item = TimestampedItem(s)
+        item = TimestampedData(s)
         self._queue.sync_q.put_nowait(item)
 
     def start(self):

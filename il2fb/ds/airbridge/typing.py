@@ -5,7 +5,7 @@ from typing import Awaitable, Callable, Optional, List, Union
 
 from il2fb.commons.events import Event
 
-from il2fb.ds.airbridge.structures import TimestampedItem
+from il2fb.ds.airbridge.structures import TimestampedData
 
 
 EventOrNone = Optional[Event]
@@ -22,4 +22,4 @@ StringOrNoneProducer = Callable[[], StringOrNone]
 StringOrPath = Union[str, Path]
 StringList = List[str]
 
-AsyncTimestampedItemHandler = Callable[[TimestampedItem], Awaitable[None]]
+AsyncTimestampedDataHandler = Callable[[TimestampedData], Awaitable[None]]
