@@ -84,9 +84,9 @@ class Airbridge:
         )
 
     async def start(self) -> Awaitable[None]:
-        await self._maybe_start_proxies()
         self._start_streaming_facilities()
         self._start_game_log_processing()
+        await self._maybe_start_proxies()
 
     async def _maybe_start_proxies(self):
         await asyncio.gather(
