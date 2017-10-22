@@ -137,7 +137,7 @@ CONFIG_SCHEMA = {
             },
             'required': ['file_path', ],
         },
-        'sourcing': {
+        'streaming': {
             'type': 'object',
             'properties': {
                 'chat': {
