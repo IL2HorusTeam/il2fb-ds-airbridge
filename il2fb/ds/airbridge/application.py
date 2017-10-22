@@ -14,14 +14,15 @@ from ddict import DotAccessDict
 from il2fb.commons.events import Event
 from il2fb.ds.middleware.console.client import ConsoleClient
 from il2fb.ds.middleware.device_link.client import DeviceLinkClient
-from il2fb.parsers.game_log import events as game_log_events
 from il2fb.parsers.game_log.parsers import GameLogEventParser
 
 from il2fb.ds.airbridge.dedicated_server.console import ConsoleProxy
 from il2fb.ds.airbridge.dedicated_server.device_link import DeviceLinkProxy
 from il2fb.ds.airbridge.dedicated_server.game_log import GameLogWorker
 from il2fb.ds.airbridge.dedicated_server.process import DedicatedServer
-from il2fb.ds.airbridge.streaming.facilities import ChatStreamingFacility
+from il2fb.ds.airbridge.streaming.facilities import (
+    ChatStreamingFacility, EventsStreamingFacility,
+)
 from il2fb.ds.airbridge.structures import TimestampedItem
 from il2fb.ds.airbridge.typing import (
     StringHandler, AsyncTimestampedItemHandler,
@@ -55,72 +56,32 @@ class Airbridge:
         self._device_link_client = device_link_client
         self._device_link_client_proxy = None
 
-        self._game_log_watch_dog = None
-        self._game_log_watch_dog_thread = None
-
-        self._game_log_worker = None
-        self._game_log_worker_thread = None
-
         self._game_log_string_queue = queue.Queue()
         self._game_log_event_parser = GameLogEventParser()
+
+        self._game_log_worker = GameLogWorker(
+            string_producer=self._game_log_string_queue.get,
+            string_parser=self._game_log_event_parser.parse,
+        )
+        self._game_log_worker_thread = None
+
+        self._game_log_watch_dog = None
+        self._game_log_watch_dog_thread = None
 
         self.chat = ChatStreamingFacility(
             loop=loop,
             console_client=console_client,
         )
-
-        self._events_queue = janus.Queue(loop=loop)
-        self._events_subscribers_lock = asyncio.Lock(loop=loop)
-        self._events_subscribers = []
-        self._events_processing_task = None
+        self.events = EventsStreamingFacility(
+            loop=loop,
+            console_client=console_client,
+            game_log_worker=self._game_log_worker,
+        )
 
         self._not_parsed_strings_queue = janus.Queue(loop=loop)
         self._not_parsed_strings_subscribers_lock = asyncio.Lock(loop=loop)
         self._not_parsed_strings_subscribers = []
         self._not_parsed_strings_processing_task = None
-
-    async def subscribe_to_events(
-        self,
-        subscriber: AsyncTimestampedItemHandler,
-    ) -> Awaitable[None]:
-        with await self._events_subscribers_lock:
-            if not self._events_subscribers:
-                self._game_log_worker.subscribe_to_events(
-                    subscriber=self._handle_human_connection_event,
-                )
-                self._console_client.subscribe_to_human_connection_events(
-                    subscriber=self._handle_game_log_event,
-                )
-            self._events_subscribers.append(subscriber)
-
-    async def unsubscribe_from_events(
-        self,
-        subscriber: AsyncTimestampedItemHandler,
-    ) -> Awaitable[None]:
-        with await self._events_subscribers_lock:
-            self._events_subscribers.remove(subscriber)
-            if not self._events_subscribers:
-                self._console_client.unsubscribe_from_human_connection_events(
-                    subscriber=self._handle_human_connection_event,
-                )
-                self._game_log_worker.unsubscribe_from_events(
-                    subscriber=self._handle_game_log_event,
-                )
-
-    def _handle_human_connection_event(self, event: Event) -> None:
-        item = TimestampedItem(event)
-        self._events_queue.async_q.put_nowait(item)
-
-    def _handle_game_log_event(self, event: Event) -> None:
-        ignored_events = (
-            game_log_events.HumanHasConnected,
-            game_log_events.HumanHasDisconnected,
-        )
-        if isinstance(event, ignored_events):
-            return
-
-        item = TimestampedItem(event)
-        self._events_queue.sync_q.put_nowait(item)
 
     async def subscribe_to_not_parsed_strings(
         self,
@@ -178,30 +139,11 @@ class Airbridge:
 
     def _start_subscribers_serving(self):
         self.chat.start()
-        self._events_processing_task = self._loop.create_task(
-            self._process_events(),
-        )
+        self.events.start()
+
         self._not_parsed_strings_processing_task = self._loop.create_task(
             self._process_not_parsed_strings(),
         )
-
-    async def _process_events(self):
-        while True:
-            item = await self._events_queue.async_q.get()
-            if item is None:
-                break
-
-            with await self._events_subscribers_lock:
-                for subscriber in self._events_subscribers:
-                    try:
-                        result = subscriber(item)
-                        if asyncio.iscoroutine(result):
-                            await result
-                    except:
-                        LOG.exception(
-                            f"subscriber failed to handle event "
-                            f"(item={repr(item)})"
-                        )
 
     async def _process_not_parsed_strings(self):
         while True:
@@ -222,10 +164,6 @@ class Airbridge:
                         )
 
     def _start_game_log_worker(self):
-        self._game_log_worker = GameLogWorker(
-            string_producer=self._game_log_string_queue.get,
-            string_parser=self._game_log_event_parser.parse,
-        )
         self._game_log_worker_thread = threading.Thread(
             target=self._game_log_worker.run,
             daemon=True,
@@ -283,13 +221,12 @@ class Airbridge:
             self._game_log_worker_thread.join()
 
         self.chat.stop()
+        self.events.stop()
+
         await self.chat.wait_stopped()
+        await self.events.wait_stopped()
 
         awaitables = []
-
-        if self._events_processing_task:
-            self._events_queue.async_q.put_nowait(None)
-            awaitables.append(self._events_processing_task)
 
         if self._not_parsed_strings_processing_task:
             self._not_parsed_strings_queue.async_q.put_nowait(None)
