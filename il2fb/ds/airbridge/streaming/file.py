@@ -5,22 +5,27 @@ from typing import Any
 
 from il2fb.ds.airbridge import json
 from il2fb.ds.airbridge.typing import StringOrPath
+from il2fb.ds.airbridge.streaming.sink import StreamingSink
 
 
-class FileSink:
+class FileStreamingSink(StreamingSink):
 
     def __init__(self, path: StringOrPath):
         self._path = path if isinstance(path, Path) else Path(path)
         self._stream = None
         self._stat = None
-        self._open_stream()
 
-    def _open_stream(self):
+    def open(self):
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._stream = self._path.open('a', buffering=1)
         self._stat = self._path.lstat()
 
-    def _maybe_reopen_stream(self):
+    def write(self, s: str) -> None:
+        self._maybe_reopen()
+        self._stream.write(s + '\n')
+        self._stream.flush()
+
+    def _maybe_reopen(self):
         try:
             stat = self._path.lstat()
         except FileNotFoundError:
@@ -32,12 +37,7 @@ class FileSink:
             (stat.st_ino != self._stat.st_ino)
         ):
             self.close()
-            self._open_stream()
-
-    def write(self, s: str) -> None:
-        self._maybe_reopen_stream()
-        self._stream.write(s + '\n')
-        self._stream.flush()
+            self.open()
 
     def close(self):
         try:
@@ -46,7 +46,7 @@ class FileSink:
             self._stream.close()
 
 
-class JSONFileSink(FileSink):
+class JSONFileStreamingSink(FileStreamingSink):
 
     def write(self, o: Any) -> None:
         s = json.dumps(o)
