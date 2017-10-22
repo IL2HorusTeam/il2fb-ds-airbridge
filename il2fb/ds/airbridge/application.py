@@ -22,6 +22,7 @@ from il2fb.ds.airbridge.streaming.facilities import (
     EventsStreamingFacility,
     NotParsedStringsStreamingFacility,
 )
+from il2fb.ds.airbridge.streaming.subscribers import get_joint_subscriber
 from il2fb.ds.airbridge.watch_dog import TextFileWatchDog
 
 
@@ -83,10 +84,44 @@ class Airbridge:
             game_log_worker=self._game_log_worker,
         )
 
+        self._streaming_subscribers = {
+            self.chat: get_joint_subscriber(
+                loop=loop,
+                config=config.streaming.chat,
+            ),
+            self.events: get_joint_subscriber(
+                loop=loop,
+                config=config.streaming.events,
+            ),
+            self.not_parsed_strings: get_joint_subscriber(
+                loop=loop,
+                config=config.streaming.not_parsed_strings,
+            ),
+        }
+
     async def start(self) -> Awaitable[None]:
+        await self._maybe_start_streaming_subscribers()
         self._start_streaming_facilities()
         self._start_game_log_processing()
         await self._maybe_start_proxies()
+
+    async def _maybe_start_streaming_subscribers(self):
+        subscribers = self._streaming_subscribers.values()
+
+        for subscriber in subscribers:
+            subscriber.open()
+
+        awaitables = [
+            subscriber.wait_opened()
+            for subscriber in subscribers
+        ]
+        await asyncio.gather(*awaitables, loop=self._loop)
+
+        awaitables = [
+            facility.subscribe(subscriber.write)
+            for facility, subscriber in self._streaming_subscribers.items()
+        ]
+        await asyncio.gather(*awaitables, loop=self._loop)
 
     def _start_streaming_facilities(self):
         self.chat.start()
@@ -153,6 +188,7 @@ class Airbridge:
         await self._maybe_wait_proxies()
         self._maybe_stop_game_log_processing()
         await self._stop_streaming_facilities()
+        await self._stop_streaming_subscribers()
 
     async def _maybe_wait_proxies(self):
         awaitables = []
@@ -188,3 +224,21 @@ class Airbridge:
             self.not_parsed_strings.wait_stopped(),
             loop=self._loop,
         )
+
+    async def _stop_streaming_subscribers(self):
+        awaitables = [
+            facility.unsubscribe(subscriber.write)
+            for facility, subscriber in self._streaming_subscribers.items()
+        ]
+        await asyncio.gather(*awaitables, loop=self._loop)
+
+        subscribers = self._streaming_subscribers.values()
+
+        for subscriber in subscribers:
+            subscriber.close()
+
+        awaitables = [
+            subscriber.wait_closed()
+            for subscriber in subscribers
+        ]
+        await asyncio.gather(*awaitables, loop=self._loop)

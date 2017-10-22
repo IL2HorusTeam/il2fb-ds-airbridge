@@ -1,11 +1,11 @@
 # coding: utf-8
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Awaitable
 
 from il2fb.ds.airbridge import json
 from il2fb.ds.airbridge.typing import StringOrPath
-from il2fb.ds.airbridge.streaming.sink import StreamingSink
+from il2fb.ds.airbridge.streaming.sinks import StreamingSink
 
 
 class FileStreamingSink(StreamingSink):
@@ -20,7 +20,7 @@ class FileStreamingSink(StreamingSink):
         self._stream = self._path.open('a', buffering=1)
         self._stat = self._path.lstat()
 
-    def write(self, s: str) -> None:
+    async def write(self, s: str) -> Awaitable[None]:
         self._maybe_reopen()
         self._stream.write(s + '\n')
         self._stream.flush()
@@ -48,6 +48,6 @@ class FileStreamingSink(StreamingSink):
 
 class JSONFileStreamingSink(FileStreamingSink):
 
-    def write(self, o: Any) -> None:
+    async def write(self, o: Any) -> Awaitable[None]:
         s = json.dumps(o)
-        super().write(s)
+        await super().write(s)
