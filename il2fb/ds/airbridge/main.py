@@ -17,7 +17,7 @@ from il2fb.ds.middleware.device_link.client import DeviceLinkClient
 
 from il2fb.ds.airbridge.application import Airbridge
 from il2fb.ds.airbridge.config import load_config
-from il2fb.ds.airbridge.dedicated_server.process import DedicatedServer
+from il2fb.ds.airbridge.dedicated_server.instance import DedicatedServer
 from il2fb.ds.airbridge.dedicated_server.validators import validate_dedicated_server_config
 from il2fb.ds.airbridge.exceptions import AirbridgeException
 from il2fb.ds.airbridge.logging import setup_logging

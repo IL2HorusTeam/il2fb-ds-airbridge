@@ -15,8 +15,8 @@ from il2fb.parsers.game_log.parsers import GameLogEventParser
 
 from il2fb.ds.airbridge.dedicated_server.console import ConsoleProxy
 from il2fb.ds.airbridge.dedicated_server.device_link import DeviceLinkProxy
+from il2fb.ds.airbridge.dedicated_server.instance import DedicatedServer
 from il2fb.ds.airbridge.dedicated_server.game_log import GameLogWorker
-from il2fb.ds.airbridge.dedicated_server.process import DedicatedServer
 from il2fb.ds.airbridge.streaming.facilities import (
     ChatStreamingFacility,
     EventsStreamingFacility,
