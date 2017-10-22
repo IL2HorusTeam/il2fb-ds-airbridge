@@ -22,4 +22,7 @@ StringOrNoneProducer = Callable[[], StringOrNone]
 StringOrPath = Union[str, Path]
 StringList = List[str]
 
-AsyncTimestampedDataHandler = Callable[[TimestampedData], Awaitable[None]]
+TimestampedDataHandler = Union[
+    Callable[[TimestampedData], None],
+    Callable[[TimestampedData], Awaitable[None]],
+]
