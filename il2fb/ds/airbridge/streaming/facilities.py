@@ -114,10 +114,10 @@ class EventsStreamingFacility:
     ) -> Awaitable[None]:
         with await self._subscribers_lock:
             if not self._subscribers:
-                self._game_log_worker.subscribe_to_events(
+                self._console_client.subscribe_to_human_connection_events(
                     subscriber=self._consume_human_connection_event,
                 )
-                self._console_client.subscribe_to_human_connection_events(
+                self._game_log_worker.subscribe_to_events(
                     subscriber=self._consume_game_log_event,
                 )
             self._subscribers.append(subscriber)
