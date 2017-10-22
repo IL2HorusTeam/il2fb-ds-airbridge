@@ -6,8 +6,6 @@ import time
 
 from functools import partial
 
-from autologging import TRACE
-
 
 LOG_FORMAT = "[%(levelname).1s %(asctime)s.%(msecs)03d] %(message)s"
 LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -85,10 +83,8 @@ def get_exceptions_log_file_hangler(
 
 
 def setup_file_handlers(config):
-    logging.addLevelName(TRACE, "TRACE")
-
     root_logger = logging.getLogger()
-    root_logger.setLevel(TRACE)
+    root_logger.setLevel(logging.DEBUG)
 
     handler_class = get_file_handler_class(config)
     time_converter = time.localtime if config.use_local_time else time.gmtime

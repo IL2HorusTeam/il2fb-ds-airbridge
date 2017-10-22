@@ -10,7 +10,6 @@ try:
 except ImportError:
     import pyreadline as readline
 
-from autologging import traced
 from colorama import init as init_colors, Fore, Style
 
 from .streams import write_string_to_stream
@@ -59,7 +58,6 @@ class Terminal:
     def handle_stderr(s: str) -> None:
         write_string_to_stderr(colorize_error(s))
 
-    @traced(LOG)
     def handle_prompt(self, value: StringOrNone) -> None:
         with self._prompt_not_empty:
             if self._prompt_has_waiters:
@@ -76,7 +74,6 @@ class Terminal:
             ):
                 write_string_to_stdout(colorize_prompt(value))
 
-    @traced(LOG)
     def _pop_prompt(self) -> StringOrNone:
         with self._prompt_not_empty:
             self._prompt_has_waiters = True

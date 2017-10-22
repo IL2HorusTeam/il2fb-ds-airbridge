@@ -9,7 +9,6 @@ from typing import Awaitable
 
 import psutil
 
-from autologging import traced
 from ddict import DotAccessDict
 
 from il2fb.config.ds import ServerConfig
@@ -59,7 +58,6 @@ def make_thread_safe_string_handler(
     return thread_safe_handler
 
 
-@traced(LOG)
 async def wait_for_dedicated_server_ports(
     loop: asyncio.AbstractEventLoop,
     pid: int,
