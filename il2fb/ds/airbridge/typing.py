@@ -1,9 +1,11 @@
 # coding: utf-8
 
 from pathlib import Path
-from typing import Callable, Optional, List, Union
+from typing import Awaitable, Callable, Optional, List, Union
 
 from il2fb.commons.events import Event
+
+from il2fb.ds.airbridge.structures import TimestampedItem
 
 
 EventOrNone = Optional[Event]
@@ -19,3 +21,5 @@ StringOrNoneProducer = Callable[[], StringOrNone]
 
 StringOrPath = Union[str, Path]
 StringList = List[str]
+
+AsyncTimestampedItemHandler = Callable[[TimestampedItem], Awaitable[None]]

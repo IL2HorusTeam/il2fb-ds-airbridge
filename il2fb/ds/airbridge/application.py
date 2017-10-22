@@ -8,16 +8,24 @@ import queue
 from pathlib import Path
 from typing import Awaitable, Callable
 
+import janus
+
 from ddict import DotAccessDict
+from il2fb.commons.events import Event
 from il2fb.ds.middleware.console.client import ConsoleClient
+from il2fb.ds.middleware.console.events import ChatMessageWasReceived
 from il2fb.ds.middleware.device_link.client import DeviceLinkClient
+from il2fb.parsers.game_log import events as game_log_events
 from il2fb.parsers.game_log.parsers import GameLogEventParser
 
 from il2fb.ds.airbridge.dedicated_server.console import ConsoleProxy
 from il2fb.ds.airbridge.dedicated_server.device_link import DeviceLinkProxy
 from il2fb.ds.airbridge.dedicated_server.game_log import GameLogWorker
 from il2fb.ds.airbridge.dedicated_server.process import DedicatedServer
-from il2fb.ds.airbridge.typing import IntOrNone, StringHandler
+from il2fb.ds.airbridge.structures import TimestampedItem
+from il2fb.ds.airbridge.typing import (
+    IntOrNone, StringHandler, AsyncTimestampedItemHandler,
+)
 from il2fb.ds.airbridge.watch_dog import TextFileWatchDog
 
 
@@ -56,10 +64,123 @@ class Airbridge:
         self._game_log_string_queue = queue.Queue()
         self._game_log_event_parser = GameLogEventParser()
 
+        self._chat_queue = asyncio.Queue(loop=loop)
+        self._chat_subscribers_lock = asyncio.Lock(loop=loop)
+        self._chat_subscribers = []
+        self._chat_processing_task = None
+
+        self._events_queue = janus.Queue(loop=loop)
+        self._events_subscribers_lock = asyncio.Lock(loop=loop)
+        self._events_subscribers = []
+        self._events_processing_task = None
+
+        self._not_parsed_strings_queue = janus.Queue(loop=loop)
+        self._not_parsed_strings_subscribers_lock = asyncio.Lock(loop=loop)
+        self._not_parsed_strings_subscribers = []
+        self._not_parsed_strings_processing_task = None
+
+    async def subscribe_to_chat(
+        self,
+        subscriber: AsyncTimestampedItemHandler,
+    ) -> Awaitable[None]:
+        with await self._chat_subscribers_lock:
+            if not self._chat_subscribers:
+                self._console_client.subscribe_to_chat(
+                    subscriber=self._handle_chat,
+                )
+            self._chat_subscribers.append(subscriber)
+
+    async def unsubscribe_from_chat(
+        self,
+        subscriber: AsyncTimestampedItemHandler,
+    ) -> Awaitable[None]:
+        with await self._chat_subscribers_lock:
+            self._chat_subscribers.remove(subscriber)
+            if not self._chat_subscribers:
+                self._console_client.unsubscribe_from_chat(
+                    subscriber=self._handle_chat,
+                )
+
+    def _handle_chat(self, event: ChatMessageWasReceived) -> None:
+        item = TimestampedItem(event)
+        self._chat_queue.put_nowait(item)
+
+    async def subscribe_to_events(
+        self,
+        subscriber: AsyncTimestampedItemHandler,
+    ) -> Awaitable[None]:
+        with await self._events_subscribers_lock:
+            if not self._events_subscribers:
+                self._game_log_worker.subscribe_to_events(
+                    subscriber=self._handle_human_connection_event,
+                )
+                self._console_client.subscribe_to_human_connection_events(
+                    subscriber=self._handle_game_log_event,
+                )
+            self._events_subscribers.append(subscriber)
+
+    async def unsubscribe_from_events(
+        self,
+        subscriber: AsyncTimestampedItemHandler,
+    ) -> Awaitable[None]:
+        with await self._events_subscribers_lock:
+            self._events_subscribers.remove(subscriber)
+            if not self._events_subscribers:
+                self._console_client.unsubscribe_from_human_connection_events(
+                    subscriber=self._handle_human_connection_event,
+                )
+                self._game_log_worker.unsubscribe_from_events(
+                    subscriber=self._handle_game_log_event,
+                )
+
+    def _handle_human_connection_event(self, event: Event) -> None:
+        item = TimestampedItem(event)
+        self._events_queue.async_q.put_nowait(item)
+
+    def _handle_game_log_event(self, event: Event) -> None:
+        ignored_events = (
+            game_log_events.HumanHasConnected,
+            game_log_events.HumanHasDisconnected,
+        )
+        if isinstance(event, ignored_events):
+            return
+
+        item = TimestampedItem(event)
+        self._events_queue.sync_q.put_nowait(item)
+
+    async def subscribe_to_not_parsed_strings(
+        self,
+        subscriber: AsyncTimestampedItemHandler,
+    ) -> Awaitable[None]:
+        with await self._not_parsed_strings_subscribers_lock:
+            if not self._not_parsed_strings_subscribers:
+                self._game_log_worker.subscribe_to_not_parsed_strings(
+                    subscriber=self._handle_not_parsed_string,
+                )
+            self._not_parsed_strings_subscribers.append(subscriber)
+
+    async def unsubscribe_from_not_parsed_strings(
+        self,
+        subscriber: AsyncTimestampedItemHandler,
+    ) -> Awaitable[None]:
+        with await self._not_parsed_strings_subscribers_lock:
+            self._not_parsed_strings_subscribers.remove(subscriber)
+            if not self._not_parsed_strings_subscribers:
+                self._game_log_worker.unsubscribe_from_not_parsed_strings(
+                    subscriber=self._handle_not_parsed_string,
+                )
+
+    def _handle_not_parsed_string(self, s: str) -> None:
+        item = TimestampedItem(s)
+        self._not_parsed_strings_queue.sync_q.put_nowait(item)
+
     async def start(self) -> Awaitable[None]:
         await self._maybe_start_console_client_proxy()
         await self._maybe_start_device_link_client_proxy()
-        self._start_game_log_processing()
+
+        self._start_subscribers_serving()
+        self._start_game_log_worker()
+        self._start_game_log_watch_dog()
 
     async def _maybe_start_console_client_proxy(self) -> None:
         console_proxy_config = self._config.ds.console_proxy
@@ -81,9 +202,70 @@ class Airbridge:
             )
             await self._device_link_client_proxy.start()
 
-    def _start_game_log_processing(self):
-        self._start_game_log_worker()
-        self._start_game_log_watch_dog()
+    def _start_subscribers_serving(self):
+        self._chat_processing_task = self._loop.create_task(
+            self._process_chat(),
+        )
+        self._events_processing_task = self._loop.create_task(
+            self._process_events(),
+        )
+        self._not_parsed_strings_processing_task = self._loop.create_task(
+            self._process_not_parsed_strings(),
+        )
+
+    async def _process_chat(self):
+        while True:
+            item = await self._chat_queue.get()
+            if item is None:
+                break
+
+            with await self._chat_subscribers_lock:
+                for subscriber in self._chat_subscribers:
+                    try:
+                        result = subscriber(item)
+                        if asyncio.iscoroutine(result):
+                            await result
+                    except:
+                        LOG.exception(
+                            f"subscriber failed to handle chat event "
+                            f"(item={repr(item)})"
+                        )
+
+    async def _process_events(self):
+        while True:
+            item = await self._events_queue.async_q.get()
+            if item is None:
+                break
+
+            with await self._events_subscribers_lock:
+                for subscriber in self._events_subscribers:
+                    try:
+                        result = subscriber(item)
+                        if asyncio.iscoroutine(result):
+                            await result
+                    except:
+                        LOG.exception(
+                            f"subscriber failed to handle event "
+                            f"(item={repr(item)})"
+                        )
+
+    async def _process_not_parsed_strings(self):
+        while True:
+            item = await self._not_parsed_strings_queue.async_q.get()
+            if item is None:
+                break
+
+            with await self._not_parsed_strings_subscribers_lock:
+                for subscriber in self._not_parsed_strings_subscribers:
+                    try:
+                        result = subscriber(item)
+                        if asyncio.iscoroutine(result):
+                            await result
+                    except:
+                        LOG.exception(
+                            f"subscriber failed to handle not parsered string "
+                            f"(item={repr(item)})"
+                        )
 
     def _start_game_log_worker(self):
         self._game_log_worker = GameLogWorker(
@@ -145,3 +327,20 @@ class Airbridge:
         if self._game_log_worker_thread:
             self._game_log_string_queue.put_nowait(None)
             self._game_log_worker_thread.join()
+
+        awaitables = []
+
+        if self._chat_processing_task:
+            self._chat_queue.put_nowait(None)
+            awaitables.append(self._chat_processing_task)
+
+        if self._events_processing_task:
+            self._events_queue.async_q.put_nowait(None)
+            awaitables.append(self._events_processing_task)
+
+        if self._not_parsed_strings_processing_task:
+            self._not_parsed_strings_queue.async_q.put_nowait(None)
+            awaitables.append(self._not_parsed_strings_processing_task)
+
+        if awaitables:
+            await asyncio.gather(*awaitables, loop=self._loop)
