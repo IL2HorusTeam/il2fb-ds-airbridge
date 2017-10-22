@@ -8,10 +8,7 @@ import queue
 from pathlib import Path
 from typing import Awaitable, Callable
 
-import janus
-
 from ddict import DotAccessDict
-from il2fb.commons.events import Event
 from il2fb.ds.middleware.console.client import ConsoleClient
 from il2fb.ds.middleware.device_link.client import DeviceLinkClient
 from il2fb.parsers.game_log.parsers import GameLogEventParser
@@ -21,11 +18,9 @@ from il2fb.ds.airbridge.dedicated_server.device_link import DeviceLinkProxy
 from il2fb.ds.airbridge.dedicated_server.game_log import GameLogWorker
 from il2fb.ds.airbridge.dedicated_server.process import DedicatedServer
 from il2fb.ds.airbridge.streaming.facilities import (
-    ChatStreamingFacility, EventsStreamingFacility,
-)
-from il2fb.ds.airbridge.structures import TimestampedItem
-from il2fb.ds.airbridge.typing import (
-    StringHandler, AsyncTimestampedItemHandler,
+    ChatStreamingFacility,
+    EventsStreamingFacility,
+    NotParsedStringsStreamingFacility,
 )
 from il2fb.ds.airbridge.watch_dog import TextFileWatchDog
 
@@ -77,37 +72,10 @@ class Airbridge:
             console_client=console_client,
             game_log_worker=self._game_log_worker,
         )
-
-        self._not_parsed_strings_queue = janus.Queue(loop=loop)
-        self._not_parsed_strings_subscribers_lock = asyncio.Lock(loop=loop)
-        self._not_parsed_strings_subscribers = []
-        self._not_parsed_strings_processing_task = None
-
-    async def subscribe_to_not_parsed_strings(
-        self,
-        subscriber: AsyncTimestampedItemHandler,
-    ) -> Awaitable[None]:
-        with await self._not_parsed_strings_subscribers_lock:
-            if not self._not_parsed_strings_subscribers:
-                self._game_log_worker.subscribe_to_not_parsed_strings(
-                    subscriber=self._handle_not_parsed_string,
-                )
-            self._not_parsed_strings_subscribers.append(subscriber)
-
-    async def unsubscribe_from_not_parsed_strings(
-        self,
-        subscriber: AsyncTimestampedItemHandler,
-    ) -> Awaitable[None]:
-        with await self._not_parsed_strings_subscribers_lock:
-            self._not_parsed_strings_subscribers.remove(subscriber)
-            if not self._not_parsed_strings_subscribers:
-                self._game_log_worker.unsubscribe_from_not_parsed_strings(
-                    subscriber=self._handle_not_parsed_string,
-                )
-
-    def _handle_not_parsed_string(self, s: str) -> None:
-        item = TimestampedItem(s)
-        self._not_parsed_strings_queue.sync_q.put_nowait(item)
+        self.not_parsed_strings = NotParsedStringsStreamingFacility(
+            loop=loop,
+            game_log_worker=self._game_log_worker,
+        )
 
     async def start(self) -> Awaitable[None]:
         await self._maybe_start_console_client_proxy()
@@ -140,28 +108,7 @@ class Airbridge:
     def _start_subscribers_serving(self):
         self.chat.start()
         self.events.start()
-
-        self._not_parsed_strings_processing_task = self._loop.create_task(
-            self._process_not_parsed_strings(),
-        )
-
-    async def _process_not_parsed_strings(self):
-        while True:
-            item = await self._not_parsed_strings_queue.async_q.get()
-            if item is None:
-                break
-
-            with await self._not_parsed_strings_subscribers_lock:
-                for subscriber in self._not_parsed_strings_subscribers:
-                    try:
-                        result = subscriber(item)
-                        if asyncio.iscoroutine(result):
-                            await result
-                    except:
-                        LOG.exception(
-                            f"subscriber failed to handle not parsered string "
-                            f"(item={repr(item)})"
-                        )
+        self.not_parsed_strings.start()
 
     def _start_game_log_worker(self):
         self._game_log_worker_thread = threading.Thread(
@@ -222,15 +169,11 @@ class Airbridge:
 
         self.chat.stop()
         self.events.stop()
+        self.not_parsed_strings.stop()
 
-        await self.chat.wait_stopped()
-        await self.events.wait_stopped()
-
-        awaitables = []
-
-        if self._not_parsed_strings_processing_task:
-            self._not_parsed_strings_queue.async_q.put_nowait(None)
-            awaitables.append(self._not_parsed_strings_processing_task)
-
-        if awaitables:
-            await asyncio.gather(*awaitables, loop=self._loop)
+        await asyncio.gather(
+            self.chat.wait_stopped(),
+            self.events.wait_stopped(),
+            self.not_parsed_strings.wait_stopped(),
+            loop=self._loop,
+        )
