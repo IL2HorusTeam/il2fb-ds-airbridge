@@ -143,6 +143,5 @@ class Airbridge:
             self._game_log_watch_dog_thread.join()
 
         if self._game_log_worker_thread:
-            self._game_log_worker.stop()
             self._game_log_string_queue.put_nowait(None)
             self._game_log_worker_thread.join()

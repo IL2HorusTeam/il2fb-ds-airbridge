@@ -24,9 +24,6 @@ class GameLogWorker:
         self._string_producer = string_producer
         self._string_parser = string_parser
 
-        self._do_stop = False
-        self._stop_lock = threading.Lock()
-
         self._events_subscribers = []
         self._events_subscribers_lock = threading.Lock()
 
@@ -48,16 +45,6 @@ class GameLogWorker:
         with self._not_parsed_strings_subscribers_lock:
             self._not_parsed_strings_subscribers.append(subscriber)
 
-    def stop(self) -> None:
-        """
-        Ask worker to stop.
-
-        Actual stop will happen only after string producer will produce
-        ``None`` value.
-
-        """
-        with self._stop_lock:
-            self._do_stop = True
     def unsubscribe_from_not_parsed_strings(
         self,
         subscriber: StringHandler,
@@ -84,11 +71,7 @@ class GameLogWorker:
                 continue
 
             if string is None:
-                with self._stop_lock:
-                    if self._do_stop:
-                        break
-                    else:
-                        continue
+                break
 
             try:
                 event = self._string_parser(string)
