@@ -118,15 +118,8 @@ class Airbridge:
         self._game_log_worker_thread.start()
 
     def _start_game_log_watch_dog(self):
-        file_path = Path(self._dedicated_server.config.events.logging.file_name)
-
-        if not file_path.is_absolute():
-            file_path = self._dedicated_server.root_dir / file_path
-
-        file_path = file_path.absolute()
-
         self._game_log_watch_dog = TextFileWatchDog(
-            path=file_path,
+            path=self._dedicated_server.game_log_path,
             state=self._state.game_log_watch_dog,
         )
         self._game_log_watch_dog.subscribe(

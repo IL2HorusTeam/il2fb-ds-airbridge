@@ -222,6 +222,10 @@ class DedicatedServer:
         )
         self.config = _try_to_load_config(self.config_path)
 
+        self.game_log_path = Path(self.config.events.logging.file_name)
+        if not self.game_log_path.is_absolute():
+            self.game_log_path = self.root_dir / self.game_log_path
+
         self._stdout_handler = (
             functools.partial(_try_to_handle_string, stdout_handler)
             if stdout_handler
