@@ -53,7 +53,7 @@ class Airbridge:
         self._game_log_worker = None
         self._game_log_worker_thread = None
 
-        self._game_log_line_queue = queue.Queue()
+        self._game_log_string_queue = queue.Queue()
         self._game_log_event_parser = GameLogEventParser()
 
     async def start(self) -> Awaitable[None]:
@@ -87,7 +87,7 @@ class Airbridge:
 
     def _start_game_log_worker(self):
         self._game_log_worker = GameLogWorker(
-            string_producer=self._game_log_line_queue.get,
+            string_producer=self._game_log_string_queue.get,
             string_parser=self._game_log_event_parser.parse,
         )
         self._game_log_worker_thread = threading.Thread(
@@ -109,7 +109,7 @@ class Airbridge:
             state=self._state.game_log_watch_dog,
         )
         self._game_log_watch_dog.subscribe(
-            subscriber=self._game_log_line_queue.put_nowait,
+            subscriber=self._game_log_string_queue.put_nowait,
         )
         self._game_log_watch_dog_thread = threading.Thread(
             target=self._game_log_watch_dog.run,
@@ -144,5 +144,5 @@ class Airbridge:
 
         if self._game_log_worker_thread:
             self._game_log_worker.stop()
-            self._game_log_line_queue.put_nowait(None)
+            self._game_log_string_queue.put_nowait(None)
             self._game_log_worker_thread.join()
