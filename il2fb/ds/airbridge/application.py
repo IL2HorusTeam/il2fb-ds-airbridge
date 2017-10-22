@@ -81,7 +81,7 @@ class Airbridge:
         await self._maybe_start_console_client_proxy()
         await self._maybe_start_device_link_client_proxy()
 
-        self._start_subscribers_serving()
+        self._start_streaming_facilities()
         self._start_game_log_worker()
         self._start_game_log_watch_dog()
 
@@ -105,7 +105,7 @@ class Airbridge:
             )
             await self._device_link_client_proxy.start()
 
-    def _start_subscribers_serving(self):
+    def _start_streaming_facilities(self):
         self.chat.start()
         self.events.start()
         self.not_parsed_strings.start()
@@ -167,6 +167,9 @@ class Airbridge:
             self._game_log_string_queue.put_nowait(None)
             self._game_log_worker_thread.join()
 
+        await self._stop_streaming_facilities()
+
+    async def _stop_streaming_facilities(self):
         self.chat.stop()
         self.events.stop()
         self.not_parsed_strings.stop()
