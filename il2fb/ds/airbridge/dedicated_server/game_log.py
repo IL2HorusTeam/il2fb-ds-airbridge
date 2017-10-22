@@ -30,8 +30,8 @@ class GameLogWorker:
         self._events_subscribers = []
         self._events_subscribers_lock = threading.Lock()
 
-        self._errors_subscribers = []
-        self._errors_subscribers_lock = threading.Lock()
+        self._not_parsed_strings_subscribers = []
+        self._not_parsed_strings_subscribers_lock = threading.Lock()
 
     def subscribe_to_events(self, subscriber: EventHandler) -> None:
         with self._events_subscribers_lock:
@@ -41,13 +41,12 @@ class GameLogWorker:
         with self._events_subscribers_lock:
             self._events_subscribers.remove(subscriber)
 
-    def subscribe_to_errors(self, subscriber: StringHandler) -> None:
-        with self._errors_subscribers_lock:
-            self._errors_subscribers.append(subscriber)
-
-    def unsubscribe_from_errors(self, subscriber: StringHandler) -> None:
-        with self._errors_subscribers_lock:
-            self._errors_subscribers.remove(subscriber)
+    def subscribe_to_not_parsed_strings(
+        self,
+        subscriber: StringHandler,
+    ) -> None:
+        with self._not_parsed_strings_subscribers_lock:
+            self._not_parsed_strings_subscribers.append(subscriber)
 
     def stop(self) -> None:
         """
@@ -59,6 +58,12 @@ class GameLogWorker:
         """
         with self._stop_lock:
             self._do_stop = True
+    def unsubscribe_from_not_parsed_strings(
+        self,
+        subscriber: StringHandler,
+    ) -> None:
+        with self._not_parsed_strings_subscribers_lock:
+            self._not_parsed_strings_subscribers.remove(subscriber)
 
     def run(self) -> None:
         try:
@@ -90,7 +95,7 @@ class GameLogWorker:
                 if event is not None:
                     self._handle_event(event)
             except EventParsingException:
-                self._handle_error(string)
+                self._handle_not_parsed_string(string)
             except Exception:
                 LOG.exception(f"failed to parse game log string `{string}`")
 
@@ -105,13 +110,13 @@ class GameLogWorker:
                         f"event {event}"
                     )
 
-    def _handle_error(self, s: str) -> None:
-        with self._errors_subscribers_lock:
-            for subscriber in self._errors_subscribers:
+    def _handle_not_parsed_string(self, s: str) -> None:
+        with self._not_parsed_strings_subscribers_lock:
+            for subscriber in self._not_parsed_strings_subscribers:
                 try:
                     subscriber(s)
                 except Exception:
                     LOG.exception(
-                        f"subscriber {subscriber} failed to handle invalid "
+                        f"subscriber {subscriber} failed to handle not parsed "
                         f"game log string `{s}`"
                     )
