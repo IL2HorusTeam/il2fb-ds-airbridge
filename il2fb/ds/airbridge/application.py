@@ -88,6 +88,29 @@ class Airbridge:
         self._start_game_log_processing()
         await self._maybe_start_proxies()
 
+    def _start_streaming_facilities(self):
+        self.chat.start()
+        self.events.start()
+        self.not_parsed_strings.start()
+
+    def _start_game_log_processing(self):
+        self._start_game_log_worker()
+        self._start_game_log_watch_dog()
+
+    def _start_game_log_worker(self):
+        self._game_log_worker_thread = threading.Thread(
+            target=self._game_log_worker.run,
+            daemon=True,
+        )
+        self._game_log_worker_thread.start()
+
+    def _start_game_log_watch_dog(self):
+        self._game_log_watch_dog_thread = threading.Thread(
+            target=self._game_log_watch_dog.run,
+            daemon=True,
+        )
+        self._game_log_watch_dog_thread.start()
+
     async def _maybe_start_proxies(self):
         await asyncio.gather(
             self._maybe_start_console_client_proxy(),
@@ -114,29 +137,6 @@ class Airbridge:
                 device_link_client=self._device_link_client,
             )
             await self._device_link_client_proxy.start()
-
-    def _start_streaming_facilities(self):
-        self.chat.start()
-        self.events.start()
-        self.not_parsed_strings.start()
-
-    def _start_game_log_processing(self):
-        self._start_game_log_worker()
-        self._start_game_log_watch_dog()
-
-    def _start_game_log_worker(self):
-        self._game_log_worker_thread = threading.Thread(
-            target=self._game_log_worker.run,
-            daemon=True,
-        )
-        self._game_log_worker_thread.start()
-
-    def _start_game_log_watch_dog(self):
-        self._game_log_watch_dog_thread = threading.Thread(
-            target=self._game_log_watch_dog.run,
-            daemon=True,
-        )
-        self._game_log_watch_dog_thread.start()
 
     def stop(self) -> None:
         self._maybe_stop_proxies()
