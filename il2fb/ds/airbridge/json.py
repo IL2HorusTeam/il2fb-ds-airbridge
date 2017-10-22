@@ -6,6 +6,8 @@ from functools import partial
 
 from il2fb.commons.events import Event
 
+from il2fb.ds.airbridge.structures import TimestampedData
+
 
 __all__ = ('dumps', 'loads', )
 
@@ -13,9 +15,14 @@ __all__ = ('dumps', 'loads', )
 class JSONEncoder(_json.JSONEncoder):
 
     def default(self, obj):
-        if hasattr(obj, 'to_primitive'):
-            cls = obj.__class__
+        cls = type(obj)
 
+        if issubclass(cls, TimestampedData):
+            result = {
+                key: getattr(obj, key)
+                for key in cls.__slots__
+            }
+        elif hasattr(obj, 'to_primitive'):
             result = obj.to_primitive()
             result['__type__'] = f"{cls.__module__}.{cls.__name__}"
 
