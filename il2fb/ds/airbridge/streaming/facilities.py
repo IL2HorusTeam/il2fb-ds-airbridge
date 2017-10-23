@@ -13,7 +13,7 @@ from il2fb.parsers.game_log import events as game_log_events
 
 from il2fb.ds.airbridge.dedicated_server.game_log import GameLogWorker
 from il2fb.ds.airbridge.structures import TimestampedData
-from il2fb.ds.airbridge.typing import TimestampedDataHandler
+from il2fb.ds.airbridge.streaming.subscribers.base import StreamingSubscriber
 
 
 class ChatStreamingFacility:
@@ -34,7 +34,7 @@ class ChatStreamingFacility:
 
     async def subscribe(
         self,
-        subscriber: TimestampedDataHandler,
+        subscriber: StreamingSubscriber,
     ) -> Awaitable[None]:
         with await self._subscribers_lock:
             if not self._subscribers:
@@ -45,7 +45,7 @@ class ChatStreamingFacility:
 
     async def unsubscribe(
         self,
-        subscriber: TimestampedDataHandler,
+        subscriber: StreamingSubscriber,
     ) -> Awaitable[None]:
         with await self._subscribers_lock:
             self._subscribers.remove(subscriber)
@@ -110,7 +110,7 @@ class EventsStreamingFacility:
 
     async def subscribe(
         self,
-        subscriber: TimestampedDataHandler,
+        subscriber: StreamingSubscriber,
     ) -> Awaitable[None]:
         with await self._subscribers_lock:
             if not self._subscribers:
@@ -124,7 +124,7 @@ class EventsStreamingFacility:
 
     async def unsubscribe(
         self,
-        subscriber: TimestampedDataHandler,
+        subscriber: StreamingSubscriber,
     ) -> Awaitable[None]:
         with await self._subscribers_lock:
             self._subscribers.remove(subscriber)
@@ -200,7 +200,7 @@ class NotParsedStringsStreamingFacility:
 
     async def subscribe(
         self,
-        subscriber: TimestampedDataHandler,
+        subscriber: StreamingSubscriber,
     ) -> Awaitable[None]:
         with await self._subscribers_lock:
             if not self._subscribers:
@@ -211,7 +211,7 @@ class NotParsedStringsStreamingFacility:
 
     async def unsubscribe(
         self,
-        subscriber: TimestampedDataHandler,
+        subscriber: StreamingSubscriber,
     ) -> Awaitable[None]:
         with await self._subscribers_lock:
             self._subscribers.remove(subscriber)

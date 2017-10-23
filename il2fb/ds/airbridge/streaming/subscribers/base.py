@@ -3,7 +3,7 @@
 import abc
 import asyncio
 
-from typing import Any, Awaitable, List
+from typing import Any, Awaitable
 
 
 class StreamingSubscriber(metaclass=abc.ABCMeta):
