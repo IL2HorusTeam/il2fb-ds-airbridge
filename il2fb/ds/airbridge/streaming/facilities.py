@@ -69,16 +69,19 @@ class ChatStreamingFacility:
                 break
 
             with await self._subscribers_lock:
-                for subscriber in self._subscribers:
-                    try:
-                        result = subscriber(item)
-                        if asyncio.iscoroutine(result):
-                            await result
-                    except:
-                        LOG.exception(
-                            f"subscriber failed to handle chat event "
-                            f"(item={repr(item)})"
-                        )
+                if not self._subscribers:
+                    continue
+
+                try:
+                    awaitables = [
+                        subscriber(item)
+                        for subscriber in self._subscribers
+                    ]
+                    await asyncio.gather(*awaitables, loop=self._loop)
+                except:
+                    LOG.exception(
+                        f"failed to handle chat event (item={repr(item)})"
+                    )
 
     def stop(self):
         if self._queue_task:
@@ -162,16 +165,19 @@ class EventsStreamingFacility:
                 break
 
             with await self._subscribers_lock:
-                for subscriber in self._subscribers:
-                    try:
-                        result = subscriber(item)
-                        if asyncio.iscoroutine(result):
-                            await result
-                    except:
-                        LOG.exception(
-                            f"subscriber failed to handle game event "
-                            f"(item={repr(item)})"
-                        )
+                if not self._subscribers:
+                    continue
+
+                try:
+                    awaitables = [
+                        subscriber(item)
+                        for subscriber in self._subscribers
+                    ]
+                    await asyncio.gather(*awaitables, loop=self._loop)
+                except:
+                    LOG.exception(
+                        f"failed to handle game event (item={repr(item)})"
+                    )
 
     def stop(self):
         if self._queue_task:
@@ -235,16 +241,20 @@ class NotParsedStringsStreamingFacility:
                 break
 
             with await self._subscribers_lock:
-                for subscriber in self._subscribers:
-                    try:
-                        result = subscriber(item)
-                        if asyncio.iscoroutine(result):
-                            await result
-                    except:
-                        LOG.exception(
-                            f"subscriber failed to handle not parsed string "
-                            f"(item={repr(item)})"
-                        )
+                if not self._subscribers:
+                    continue
+
+                try:
+                    awaitables = [
+                        subscriber(item)
+                        for subscriber in self._subscribers
+                    ]
+                    await asyncio.gather(*awaitables, loop=self._loop)
+                except:
+                    LOG.exception(
+                        f"failed to handle not parsed string "
+                        f"(item={repr(item)})"
+                    )
 
     def stop(self):
         if self._queue_task:
