@@ -6,6 +6,9 @@ psutil==5.3.1
 PyYAML==3.12
 janus==0.3.0
 
+asyncio-nats-client==0.6.0
+asyncio-nats-streaming-client==0.2.0
+
 il2fb-commons>=1.0.1,<1.1.0
 il2fb-ds-middleware>=1.0.0,<1.1
 il2fb-ds-config>=1.0,<1.1

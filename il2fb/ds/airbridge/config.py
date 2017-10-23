@@ -152,6 +152,34 @@ CONFIG_SCHEMA = {
                             },
                             'required': ['path', ],
                         },
+                        'nats': {
+                            'type': 'object',
+                            'properties': {
+                                'cluster_id': {
+                                    'type': 'string',
+                                },
+                                'client_id': {
+                                    'type': 'string',
+                                },
+                                'subject': {
+                                    'type': 'string',
+                                },
+                                'servers': {
+                                    'type': 'array',
+                                    'items': {
+                                        'type': 'string',
+                                        'minItems': 1,
+                                        'uniqueItems': True,
+                                    },
+                                },
+                            },
+                            'required': [
+                                'cluster_id',
+                                'client_id',
+                                'subject',
+                                'servers',
+                            ],
+                        },
                     },
                 },
                 'events': {
@@ -166,6 +194,34 @@ CONFIG_SCHEMA = {
                             },
                             'required': ['path', ],
                         },
+                        'nats': {
+                            'type': 'object',
+                            'properties': {
+                                'cluster_id': {
+                                    'type': 'string',
+                                },
+                                'client_id': {
+                                    'type': 'string',
+                                },
+                                'subject': {
+                                    'type': 'string',
+                                },
+                                'servers': {
+                                    'type': 'array',
+                                    'items': {
+                                        'type': 'string',
+                                        'minItems': 1,
+                                        'uniqueItems': True,
+                                    },
+                                },
+                            },
+                            'required': [
+                                'cluster_id',
+                                'client_id',
+                                'subject',
+                                'servers',
+                            ],
+                        },
                     },
                 },
                 'not_parsed_events': {
@@ -179,6 +235,34 @@ CONFIG_SCHEMA = {
                                 },
                             },
                             'required': ['path', ],
+                        },
+                        'nats': {
+                            'type': 'object',
+                            'properties': {
+                                'cluster_id': {
+                                    'type': 'string',
+                                },
+                                'client_id': {
+                                    'type': 'string',
+                                },
+                                'subject': {
+                                    'type': 'string',
+                                },
+                                'servers': {
+                                    'type': 'array',
+                                    'items': {
+                                        'type': 'string',
+                                        'minItems': 1,
+                                        'uniqueItems': True,
+                                    },
+                                },
+                            },
+                            'required': [
+                                'cluster_id',
+                                'client_id',
+                                'subject',
+                                'servers',
+                            ],
                         },
                     },
                 },

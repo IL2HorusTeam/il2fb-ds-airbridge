@@ -10,6 +10,7 @@ from il2fb.ds.airbridge.streaming.subscribers.base import StreamingSubscriber
 
 CLASS_NAMES_SHORTCUTS = {
     'file': 'il2fb.ds.airbridge.streaming.subscribers.file.JSONFileStreamingSink',
+    'nats': 'il2fb.ds.airbridge.streaming.subscribers.nats.NATSStreamingSink',
 }
 
 
