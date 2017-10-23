@@ -111,6 +111,9 @@ class Airbridge:
         subscriber_groups = self._streaming_subscribers.values()
         subscribers = list(itertools.chain(*subscriber_groups))
 
+        if not subscribers:
+            return
+
         for subscriber in subscribers:
             subscriber.open()
 
@@ -230,15 +233,18 @@ class Airbridge:
         )
 
     async def _maybe_stop_streaming_subscribers(self):
+        subscriber_groups = self._streaming_subscribers.values()
+        subscribers = list(itertools.chain(*subscriber_groups))
+
+        if not subscribers:
+            return
+
         awaitables = [
             facility.unsubscribe(subscriber.write)
             for facility, subscriber_group in self._streaming_subscribers.items()
             for subscriber in subscriber_group
         ]
         await asyncio.gather(*awaitables, loop=self._loop)
-
-        subscriber_groups = self._streaming_subscribers.values()
-        subscribers = list(itertools.chain(*subscriber_groups))
 
         for subscriber in subscribers:
             subscriber.close()
