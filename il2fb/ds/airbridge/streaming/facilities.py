@@ -1,8 +1,10 @@
 # coding: utf-8
 
+import abc
 import asyncio
+import logging
 
-from typing import Awaitable
+from typing import Awaitable, Optional
 
 import janus
 
@@ -16,17 +18,21 @@ from il2fb.ds.airbridge.structures import TimestampedData
 from il2fb.ds.airbridge.streaming.subscribers.base import StreamingSubscriber
 
 
-class ChatStreamingFacility:
+LOG = logging.getLogger(__name__)
+
+
+class StreamingFacility(metaclass=abc.ABCMeta):
 
     def __init__(
         self,
         loop: asyncio.AbstractEventLoop,
-        console_client: ConsoleClient,
+        name: str,
+        queue: Optional[asyncio.Queue]=None,
     ):
         self._loop = loop
-        self._console_client = console_client
+        self._name = name
 
-        self._queue = asyncio.Queue(loop=loop)
+        self._queue = queue or asyncio.Queue(loop=loop)
         self._queue_task = None
 
         self._subscribers = []
@@ -38,10 +44,11 @@ class ChatStreamingFacility:
     ) -> Awaitable[None]:
         with await self._subscribers_lock:
             if not self._subscribers:
-                self._console_client.subscribe_to_chat(
-                    subscriber=self._consume,
-                )
+                await self._before_first_subscriber()
             self._subscribers.append(subscriber)
+
+    async def _before_first_subscriber(self) -> Awaitable[None]:
+        pass
 
     async def unsubscribe(
         self,
@@ -50,19 +57,18 @@ class ChatStreamingFacility:
         with await self._subscribers_lock:
             self._subscribers.remove(subscriber)
             if not self._subscribers:
-                self._console_client.unsubscribe_from_chat(
-                    subscriber=self._consume,
-                )
+                await self._after_last_subscriber()
 
-    def _consume(self, event: ChatMessageWasReceived) -> None:
-        item = TimestampedData(event)
-        self._queue.put_nowait(item)
+    async def _after_last_subscriber(self) -> Awaitable[None]:
+        pass
 
-    def start(self):
+    def start(self) -> None:
         coroutine = self._process_queue()
         self._queue_task = self._loop.create_task(coroutine)
 
-    async def _process_queue(self):
+    async def _process_queue(self) -> Awaitable[None]:
+        LOG.info(f"streaming facility '{self._name}' was started")
+
         while True:
             item = await self._queue.get()
             if item is None:
@@ -80,10 +86,13 @@ class ChatStreamingFacility:
                     await asyncio.gather(*awaitables, loop=self._loop)
                 except:
                     LOG.exception(
-                        f"failed to handle chat event (item={repr(item)})"
+                        f"failed to handle streaming item "
+                        f"(facility='{self._name}', item={repr(item)})"
                     )
 
-    def stop(self):
+        LOG.info(f"streaming facility '{self._name}' was stopped")
+
+    def stop(self) -> None:
         if self._queue_task:
             self._queue.put_nowait(None)
 
@@ -92,56 +101,64 @@ class ChatStreamingFacility:
             await self._queue_task
 
 
-class EventsStreamingFacility:
+class ChatStreamingFacility(StreamingFacility):
+
+    def __init__(
+        self,
+        loop: asyncio.AbstractEventLoop,
+        console_client: ConsoleClient,
+        name: str="chat",
+    ):
+        self._console_client = console_client
+        super().__init__(loop=loop, name=name)
+
+    async def _before_first_subscriber(self) -> Awaitable[None]:
+        self._console_client.subscribe_to_chat(subscriber=self._consume)
+
+    async def _after_last_subscriber(self) -> Awaitable[None]:
+        self._console_client.unsubscribe_from_chat(subscriber=self._consume)
+
+    def _consume(self, event: ChatMessageWasReceived) -> None:
+        item = TimestampedData(event)
+        self._queue.put_nowait(item)
+
+
+class EventsStreamingFacility(StreamingFacility):
 
     def __init__(
         self,
         loop: asyncio.AbstractEventLoop,
         console_client: ConsoleClient,
         game_log_worker: GameLogWorker,
+        name: str="events",
     ):
-        self._loop = loop
         self._console_client = console_client
         self._game_log_worker = game_log_worker
 
-        self._queue = janus.Queue(loop=loop)
-        self._queue_task = None
+        queue = janus.Queue(loop=loop)
+        self._queue_thread_safe = queue.sync_q
 
-        self._subscribers = []
-        self._subscribers_lock = asyncio.Lock(loop=loop)
+        super().__init__(loop=loop, name=name, queue=queue.async_q)
 
+    async def _before_first_subscriber(self) -> Awaitable[None]:
+        self._game_log_worker.subscribe_to_events(
+            subscriber=self._consume_game_log_event,
+        )
+        self._console_client.subscribe_to_human_connection_events(
+            subscriber=self._consume_human_connection_event,
+        )
 
-    async def subscribe(
-        self,
-        subscriber: StreamingSubscriber,
-    ) -> Awaitable[None]:
-        with await self._subscribers_lock:
-            if not self._subscribers:
-                self._console_client.subscribe_to_human_connection_events(
-                    subscriber=self._consume_human_connection_event,
-                )
-                self._game_log_worker.subscribe_to_events(
-                    subscriber=self._consume_game_log_event,
-                )
-            self._subscribers.append(subscriber)
-
-    async def unsubscribe(
-        self,
-        subscriber: StreamingSubscriber,
-    ) -> Awaitable[None]:
-        with await self._subscribers_lock:
-            self._subscribers.remove(subscriber)
-            if not self._subscribers:
-                self._console_client.unsubscribe_from_human_connection_events(
-                    subscriber=self._consume_human_connection_event,
-                )
-                self._game_log_worker.unsubscribe_from_events(
-                    subscriber=self._consume_game_log_event,
-                )
+    async def _after_last_subscriber(self) -> Awaitable[None]:
+        self._console_client.unsubscribe_from_human_connection_events(
+            subscriber=self._consume_human_connection_event,
+        )
+        self._game_log_worker.unsubscribe_from_events(
+            subscriber=self._consume_game_log_event,
+        )
 
     def _consume_human_connection_event(self, event: Event) -> None:
         item = TimestampedData(event)
-        self._queue.async_q.put_nowait(item)
+        self._queue.put_nowait(item)
 
     def _consume_game_log_event(self, event: Event) -> None:
         ignored_events = (
@@ -152,114 +169,34 @@ class EventsStreamingFacility:
             return
 
         item = TimestampedData(event)
-        self._queue.sync_q.put_nowait(item)
-
-    def start(self):
-        coroutine = self._process_queue()
-        self._queue_task = self._loop.create_task(coroutine)
-
-    async def _process_queue(self):
-        while True:
-            item = await self._queue.async_q.get()
-            if item is None:
-                break
-
-            with await self._subscribers_lock:
-                if not self._subscribers:
-                    continue
-
-                try:
-                    awaitables = [
-                        subscriber(item)
-                        for subscriber in self._subscribers
-                    ]
-                    await asyncio.gather(*awaitables, loop=self._loop)
-                except:
-                    LOG.exception(
-                        f"failed to handle game event (item={repr(item)})"
-                    )
-
-    def stop(self):
-        if self._queue_task:
-            self._queue.async_q.put_nowait(None)
-
-    async def wait_stopped(self) -> Awaitable[None]:
-        if self._queue_task:
-            await self._queue_task
+        self._queue_thread_safe.put_nowait(item)
 
 
-class NotParsedStringsStreamingFacility:
+class NotParsedStringsStreamingFacility(StreamingFacility):
 
     def __init__(
         self,
         loop: asyncio.AbstractEventLoop,
         game_log_worker: GameLogWorker,
+        name: str="not_parsed_strings",
     ):
-        self._loop = loop
         self._game_log_worker = game_log_worker
 
-        self._queue = janus.Queue(loop=loop)
-        self._queue_task = None
+        queue = janus.Queue(loop=loop)
+        self._queue_thread_safe = queue.sync_q
 
-        self._subscribers = []
-        self._subscribers_lock = asyncio.Lock(loop=loop)
+        super().__init__(loop=loop, name=name, queue=queue.async_q)
 
-    async def subscribe(
-        self,
-        subscriber: StreamingSubscriber,
-    ) -> Awaitable[None]:
-        with await self._subscribers_lock:
-            if not self._subscribers:
-                self._game_log_worker.subscribe_to_not_parsed_strings(
-                    subscriber=self._consume,
-                )
-            self._subscribers.append(subscriber)
+    async def _before_first_subscriber(self) -> Awaitable[None]:
+        self._game_log_worker.subscribe_to_not_parsed_strings(
+            subscriber=self._consume,
+        )
 
-    async def unsubscribe(
-        self,
-        subscriber: StreamingSubscriber,
-    ) -> Awaitable[None]:
-        with await self._subscribers_lock:
-            self._subscribers.remove(subscriber)
-            if not self._subscribers:
-                self._game_log_worker.unsubscribe_from_not_parsed_strings(
-                    subscriber=self._consume,
-                )
+    async def _after_last_subscriber(self) -> Awaitable[None]:
+        self._game_log_worker.unsubscribe_from_not_parsed_strings(
+            subscriber=self._consume,
+        )
 
     def _consume(self, s: str) -> None:
         item = TimestampedData(s)
-        self._queue.sync_q.put_nowait(item)
-
-    def start(self):
-        coroutine = self._process_queue()
-        self._queue_task = self._loop.create_task(coroutine)
-
-    async def _process_queue(self):
-        while True:
-            item = await self._queue.async_q.get()
-            if item is None:
-                break
-
-            with await self._subscribers_lock:
-                if not self._subscribers:
-                    continue
-
-                try:
-                    awaitables = [
-                        subscriber(item)
-                        for subscriber in self._subscribers
-                    ]
-                    await asyncio.gather(*awaitables, loop=self._loop)
-                except:
-                    LOG.exception(
-                        f"failed to handle not parsed string "
-                        f"(item={repr(item)})"
-                    )
-
-    def stop(self):
-        if self._queue_task:
-            self._queue.async_q.put_nowait(None)
-
-    async def wait_stopped(self) -> Awaitable[None]:
-        if self._queue_task:
-            await self._queue_task
+        self._queue.put_nowait(item)
