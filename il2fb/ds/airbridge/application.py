@@ -192,7 +192,7 @@ class Airbridge:
         await self._maybe_wait_proxies()
         self._maybe_stop_game_log_processing()
         await self._stop_streaming_facilities()
-        await self._stop_streaming_subscribers()
+        await self._maybe_stop_streaming_subscribers()
 
     async def _maybe_wait_proxies(self):
         awaitables = []
@@ -229,7 +229,7 @@ class Airbridge:
             loop=self._loop,
         )
 
-    async def _stop_streaming_subscribers(self):
+    async def _maybe_stop_streaming_subscribers(self):
         awaitables = [
             facility.unsubscribe(subscriber.write)
             for facility, subscriber_group in self._streaming_subscribers.items()
