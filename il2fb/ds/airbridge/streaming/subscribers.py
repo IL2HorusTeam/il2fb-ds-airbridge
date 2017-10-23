@@ -1,10 +1,9 @@
 # coding: utf-8
 
 from pydoc import locate
+from typing import List
 
-from il2fb.ds.airbridge.streaming.sinks import (
-    StreamingSink, JointStreamingSink,
-)
+from il2fb.ds.airbridge.streaming.sinks import StreamingSink
 
 
 CLASS_NAMES_SHORTCUTS = {
@@ -12,7 +11,7 @@ CLASS_NAMES_SHORTCUTS = {
 }
 
 
-def get_subscriber(cls_name, params) -> StreamingSink:
+def load_subscriber(cls_name, params) -> StreamingSink:
     cls_name = str(CLASS_NAMES_SHORTCUTS.get(cls_name, cls_name))
     cls = locate(cls_name)
 
@@ -24,9 +23,8 @@ def get_subscriber(cls_name, params) -> StreamingSink:
     return cls(**params)
 
 
-def get_joint_subscriber(loop, config: dict) -> JointStreamingSink:
-    items = [
-        get_subscriber(cls_name, params)
+def load_subscribers_from_config(config: dict) -> List[StreamingSink]:
+    return [
+        load_subscriber(cls_name, params)
         for cls_name, params in config.items()
     ]
-    return JointStreamingSink(loop=loop, items=items)

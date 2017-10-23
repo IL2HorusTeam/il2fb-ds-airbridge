@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import asyncio
+import itertools
 import logging
 import threading
 import queue
@@ -18,11 +19,12 @@ from il2fb.ds.airbridge.dedicated_server.device_link import DeviceLinkProxy
 from il2fb.ds.airbridge.dedicated_server.instance import DedicatedServer
 from il2fb.ds.airbridge.dedicated_server.game_log import GameLogWorker
 from il2fb.ds.airbridge.streaming.facilities import (
-    ChatStreamingFacility,
-    EventsStreamingFacility,
+    ChatStreamingFacility, EventsStreamingFacility,
     NotParsedStringsStreamingFacility,
 )
-from il2fb.ds.airbridge.streaming.subscribers import get_joint_subscriber
+from il2fb.ds.airbridge.streaming.subscribers import (
+    load_subscribers_from_config,
+)
 from il2fb.ds.airbridge.watch_dog import TextFileWatchDog
 
 
@@ -85,16 +87,13 @@ class Airbridge:
         )
 
         self._streaming_subscribers = {
-            self.chat: get_joint_subscriber(
-                loop=loop,
+            self.chat: load_subscribers_from_config(
                 config=config.streaming.chat,
             ),
-            self.events: get_joint_subscriber(
-                loop=loop,
+            self.events: load_subscribers_from_config(
                 config=config.streaming.events,
             ),
-            self.not_parsed_strings: get_joint_subscriber(
-                loop=loop,
+            self.not_parsed_strings: load_subscribers_from_config(
                 config=config.streaming.not_parsed_strings,
             ),
         }
@@ -106,7 +105,8 @@ class Airbridge:
         await self._maybe_start_proxies()
 
     async def _maybe_start_streaming_subscribers(self):
-        subscribers = self._streaming_subscribers.values()
+        subscriber_groups = self._streaming_subscribers.values()
+        subscribers = list(itertools.chain(*subscriber_groups))
 
         for subscriber in subscribers:
             subscriber.open()
@@ -119,7 +119,8 @@ class Airbridge:
 
         awaitables = [
             facility.subscribe(subscriber.write)
-            for facility, subscriber in self._streaming_subscribers.items()
+            for facility, subscriber_group in self._streaming_subscribers.items()
+            for subscriber in subscriber_group
         ]
         await asyncio.gather(*awaitables, loop=self._loop)
 
@@ -228,11 +229,13 @@ class Airbridge:
     async def _stop_streaming_subscribers(self):
         awaitables = [
             facility.unsubscribe(subscriber.write)
-            for facility, subscriber in self._streaming_subscribers.items()
+            for facility, subscriber_group in self._streaming_subscribers.items()
+            for subscriber in subscriber_group
         ]
         await asyncio.gather(*awaitables, loop=self._loop)
 
-        subscribers = self._streaming_subscribers.values()
+        subscriber_groups = self._streaming_subscribers.values()
+        subscribers = list(itertools.chain(*subscriber_groups))
 
         for subscriber in subscribers:
             subscriber.close()
