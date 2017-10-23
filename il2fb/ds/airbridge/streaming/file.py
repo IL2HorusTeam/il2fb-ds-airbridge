@@ -8,7 +8,7 @@ from il2fb.ds.airbridge.typing import StringOrPath
 from il2fb.ds.airbridge.streaming.sinks import StreamingSink
 
 
-class FileStreamingSink(StreamingSink):
+class TextFileStreamingSink(StreamingSink):
 
     def __init__(self, path: StringOrPath):
         self._path = path if isinstance(path, Path) else Path(path)
@@ -46,7 +46,7 @@ class FileStreamingSink(StreamingSink):
             self._stream.close()
 
 
-class JSONFileStreamingSink(FileStreamingSink):
+class JSONFileStreamingSink(TextFileStreamingSink):
 
     async def write(self, o: Any) -> Awaitable[None]:
         s = json.dumps(o)
