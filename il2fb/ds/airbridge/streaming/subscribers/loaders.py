@@ -3,11 +3,11 @@
 from pydoc import locate
 from typing import List
 
-from il2fb.ds.airbridge.streaming.subscribers import StreamingSubscriber
+from il2fb.ds.airbridge.streaming.subscribers.base import StreamingSubscriber
 
 
 CLASS_NAMES_SHORTCUTS = {
-    'file': 'il2fb.ds.airbridge.streaming.file.JSONFileStreamingSink',
+    'file': 'il2fb.ds.airbridge.streaming.subscribers.file.JSONFileStreamingSink',
 }
 
 

@@ -5,7 +5,7 @@ from typing import Any, Awaitable
 
 from il2fb.ds.airbridge import json
 from il2fb.ds.airbridge.typing import StringOrPath
-from il2fb.ds.airbridge.streaming.subscribers import StreamingSubscriber
+from il2fb.ds.airbridge.streaming.subscribers.base import StreamingSubscriber
 
 
 class TextFileStreamingSink(StreamingSubscriber):

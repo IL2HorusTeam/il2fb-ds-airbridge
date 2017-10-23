@@ -22,7 +22,9 @@ from il2fb.ds.airbridge.streaming.facilities import (
     ChatStreamingFacility, EventsStreamingFacility,
     NotParsedStringsStreamingFacility,
 )
-from il2fb.ds.airbridge.streaming.loaders import load_subscribers_from_config
+from il2fb.ds.airbridge.streaming.subscribers.loaders import (
+    load_subscribers_from_config,
+)
 from il2fb.ds.airbridge.watch_dog import TextFileWatchDog
 
 
