@@ -6,7 +6,7 @@ import asyncio
 from typing import Any, Awaitable, List
 
 
-class StreamingSink(metaclass=abc.ABCMeta):
+class StreamingSubscriber(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     async def write(self, o: Any) -> Awaitable[None]:

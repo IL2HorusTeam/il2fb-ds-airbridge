@@ -5,10 +5,10 @@ from typing import Any, Awaitable
 
 from il2fb.ds.airbridge import json
 from il2fb.ds.airbridge.typing import StringOrPath
-from il2fb.ds.airbridge.streaming.sinks import StreamingSink
+from il2fb.ds.airbridge.streaming.subscribers import StreamingSubscriber
 
 
-class TextFileStreamingSink(StreamingSink):
+class TextFileStreamingSink(StreamingSubscriber):
 
     def __init__(self, path: StringOrPath):
         self._path = path if isinstance(path, Path) else Path(path)

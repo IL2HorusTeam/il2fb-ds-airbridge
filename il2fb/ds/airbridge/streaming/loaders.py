@@ -3,7 +3,7 @@
 from pydoc import locate
 from typing import List
 
-from il2fb.ds.airbridge.streaming.sinks import StreamingSink
+from il2fb.ds.airbridge.streaming.subscribers import StreamingSubscriber
 
 
 CLASS_NAMES_SHORTCUTS = {
@@ -11,19 +11,19 @@ CLASS_NAMES_SHORTCUTS = {
 }
 
 
-def load_subscriber(cls_name, params) -> StreamingSink:
+def load_subscriber(cls_name, params) -> StreamingSubscriber:
     cls_name = str(CLASS_NAMES_SHORTCUTS.get(cls_name, cls_name))
     cls = locate(cls_name)
 
-    if not issubclass(cls, StreamingSink):
+    if not issubclass(cls, StreamingSubscriber):
         raise ValueError(
-            f"subscriber {cls} is not a subclass of {StreamingSink}"
+            f"subscriber {cls} is not a subclass of {StreamingSubscriber}"
         )
 
     return cls(**params)
 
 
-def load_subscribers_from_config(config: dict) -> List[StreamingSink]:
+def load_subscribers_from_config(config: dict) -> List[StreamingSubscriber]:
     return [
         load_subscriber(cls_name, params)
         for cls_name, params in config.items()
