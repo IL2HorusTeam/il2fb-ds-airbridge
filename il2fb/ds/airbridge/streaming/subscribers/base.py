@@ -8,6 +8,9 @@ from typing import Any, Awaitable
 
 class StreamingSubscriber(metaclass=abc.ABCMeta):
 
+    def __init__(self, loop: asyncio.AbstractEventLoop):
+        self._loop = loop
+
     @abc.abstractmethod
     async def write(self, o: Any) -> Awaitable[None]:
         pass

@@ -1,5 +1,7 @@
 # coding: utf-8
 
+import asyncio
+
 from pathlib import Path
 from typing import Any, Awaitable
 
@@ -10,7 +12,9 @@ from il2fb.ds.airbridge.streaming.subscribers.base import StreamingSubscriber
 
 class TextFileStreamingSink(StreamingSubscriber):
 
-    def __init__(self, path: StringOrPath):
+    def __init__(self, loop: asyncio.AbstractEventLoop, path: StringOrPath):
+        super().__init__(loop=loop)
+
         self._path = path if isinstance(path, Path) else Path(path)
         self._stream = None
         self._stat = None

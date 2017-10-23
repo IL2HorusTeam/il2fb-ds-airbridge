@@ -88,12 +88,15 @@ class Airbridge:
 
         self._streaming_subscribers = {
             self.chat: load_subscribers_from_config(
+                loop=loop,
                 config=config.streaming.chat,
             ),
             self.events: load_subscribers_from_config(
+                loop=loop,
                 config=config.streaming.events,
             ),
             self.not_parsed_strings: load_subscribers_from_config(
+                loop=loop,
                 config=config.streaming.not_parsed_strings,
             ),
         }
