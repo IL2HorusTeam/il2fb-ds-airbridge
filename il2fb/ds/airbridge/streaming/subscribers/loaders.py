@@ -15,7 +15,7 @@ CLASS_NAMES_SHORTCUTS = {
 
 
 def load_subscriber(
-    loop: asyncio.AbstractEventLoop,
+    app,
     cls_name: str,
     params: Dict[str, Any],
 ) -> StreamingSubscriber:
@@ -27,14 +27,14 @@ def load_subscriber(
             f"subscriber {cls} is not a subclass of {StreamingSubscriber}"
         )
 
-    return cls(loop=loop, **params)
+    return cls(app=app, **params)
 
 
 def load_subscribers_from_config(
-    loop: asyncio.AbstractEventLoop,
+    app,
     config: Dict[str, Dict[str, Any]],
 ) -> List[StreamingSubscriber]:
     return [
-        load_subscriber(loop, cls_name, params)
+        load_subscriber(app, cls_name, params)
         for cls_name, params in config.items()
     ]

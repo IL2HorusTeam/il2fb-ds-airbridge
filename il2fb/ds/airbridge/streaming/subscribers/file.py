@@ -12,8 +12,8 @@ from il2fb.ds.airbridge.streaming.subscribers.base import StreamingSubscriber
 
 class TextFileStreamingSink(StreamingSubscriber):
 
-    def __init__(self, loop: asyncio.AbstractEventLoop, path: StringOrPath):
-        super().__init__(loop=loop)
+    def __init__(self, app, path: StringOrPath):
+        super().__init__(app=app)
 
         self._path = path if isinstance(path, Path) else Path(path)
         self._stream = None

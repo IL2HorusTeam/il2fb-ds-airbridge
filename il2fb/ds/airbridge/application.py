@@ -18,6 +18,7 @@ from il2fb.ds.airbridge.dedicated_server.console import ConsoleProxy
 from il2fb.ds.airbridge.dedicated_server.device_link import DeviceLinkProxy
 from il2fb.ds.airbridge.dedicated_server.instance import DedicatedServer
 from il2fb.ds.airbridge.dedicated_server.game_log import GameLogWorker
+from il2fb.ds.airbridge.nats import NATSClient, NATSStreamingClient
 from il2fb.ds.airbridge.streaming.facilities import (
     ChatStreamingFacility, EventsStreamingFacility,
     NotParsedStringsStreamingFacility,
@@ -42,16 +43,17 @@ class Airbridge:
         console_client: ConsoleClient,
         device_link_client: DeviceLinkClient,
     ):
-        self._loop = loop
+        self.loop = loop
+
         self._config = config
         self._state = state
 
-        self._dedicated_server = dedicated_server
+        self.dedicated_server = dedicated_server
 
-        self._console_client = console_client
+        self.console_client = console_client
         self._console_client_proxy = None
 
-        self._device_link_client = device_link_client
+        self.device_link_client = device_link_client
         self._device_link_client_proxy = None
 
         self._game_log_string_queue = queue.Queue()
@@ -64,7 +66,7 @@ class Airbridge:
         self._game_log_worker_thread = None
 
         self._game_log_watch_dog = TextFileWatchDog(
-            path=self._dedicated_server.game_log_path,
+            path=self.dedicated_server.game_log_path,
             state=self._state.game_log_watch_dog,
         )
         self._game_log_watch_dog.subscribe(
@@ -88,24 +90,53 @@ class Airbridge:
 
         self._streaming_subscribers = {
             self.chat: load_subscribers_from_config(
-                loop=loop,
+                app=self,
                 config=config.streaming.chat,
             ),
             self.events: load_subscribers_from_config(
-                loop=loop,
+                app=self,
                 config=config.streaming.events,
             ),
             self.not_parsed_strings: load_subscribers_from_config(
-                loop=loop,
+                app=self,
                 config=config.streaming.not_parsed_strings,
             ),
         }
 
+        self.nats_client = None
+        self.nats_streaming_client = None
+
     async def start(self) -> Awaitable[None]:
+        await self._maybe_start_nats_clients()
         await self._maybe_start_streaming_subscribers()
         self._start_streaming_facilities()
         self._start_game_log_processing()
         await self._maybe_start_proxies()
+
+    async def _maybe_start_nats_clients(self):
+        config = self._config.nats
+        if not config:
+            return
+
+        self.nats_client = NATSClient(
+            loop=self.loop,
+        )
+        await self.nats_client.connect(
+            servers=config.servers,
+        )
+
+        streaming_config = config.streaming
+        if not streaming_config:
+            return
+
+        self.nats_streaming_client = NATSStreamingClient(
+            loop=self.loop,
+            nats_client=self.nats_client,
+        )
+        await self.nats_streaming_client.connect(
+            cluster_id=streaming_config.cluster_id,
+            client_id=streaming_config.client_id,
+        )
 
     async def _maybe_start_streaming_subscribers(self):
         subscriber_groups = self._streaming_subscribers.values()
@@ -121,14 +152,14 @@ class Airbridge:
             subscriber.wait_opened()
             for subscriber in subscribers
         ]
-        await asyncio.gather(*awaitables, loop=self._loop)
+        await asyncio.gather(*awaitables, loop=self.loop)
 
         awaitables = [
             facility.subscribe(subscriber.write)
             for facility, subscriber_group in self._streaming_subscribers.items()
             for subscriber in subscriber_group
         ]
-        await asyncio.gather(*awaitables, loop=self._loop)
+        await asyncio.gather(*awaitables, loop=self.loop)
 
     def _start_streaming_facilities(self):
         self.chat.start()
@@ -157,16 +188,16 @@ class Airbridge:
         await asyncio.gather(
             self._maybe_start_console_client_proxy(),
             self._maybe_start_device_link_client_proxy(),
-            loop=self._loop,
+            loop=self.loop,
         )
 
     async def _maybe_start_console_client_proxy(self) -> None:
         console_proxy_config = self._config.ds.console_proxy
         if console_proxy_config:
             self._console_client_proxy = ConsoleProxy(
-                loop=self._loop,
+                loop=self.loop,
                 config=console_proxy_config,
-                console_client=self._console_client,
+                console_client=self.console_client,
             )
             await self._console_client_proxy.start()
 
@@ -174,9 +205,9 @@ class Airbridge:
         device_link_proxy_config = self._config.ds.device_link_proxy
         if device_link_proxy_config:
             self._device_link_client_proxy = DeviceLinkProxy(
-                loop=self._loop,
+                loop=self.loop,
                 config=device_link_proxy_config,
-                device_link_client=self._device_link_client,
+                device_link_client=self.device_link_client,
             )
             await self._device_link_client_proxy.start()
 
@@ -196,6 +227,7 @@ class Airbridge:
         self._maybe_stop_game_log_processing()
         await self._stop_streaming_facilities()
         await self._maybe_stop_streaming_subscribers()
+        await self._maybe_stop_nats_clients()
 
     async def _maybe_wait_proxies(self):
         awaitables = []
@@ -207,7 +239,7 @@ class Airbridge:
             awaitables.append(self._device_link_client_proxy.wait_stopped())
 
         if awaitables:
-            await asyncio.gather(*awaitables, loop=self._loop)
+            await asyncio.gather(*awaitables, loop=self.loop)
 
     def _maybe_stop_game_log_processing(self):
         if self._game_log_watch_dog_thread:
@@ -229,7 +261,7 @@ class Airbridge:
             self.chat.wait_stopped(),
             self.events.wait_stopped(),
             self.not_parsed_strings.wait_stopped(),
-            loop=self._loop,
+            loop=self.loop,
         )
 
     async def _maybe_stop_streaming_subscribers(self):
@@ -244,7 +276,7 @@ class Airbridge:
             for facility, subscriber_group in self._streaming_subscribers.items()
             for subscriber in subscriber_group
         ]
-        await asyncio.gather(*awaitables, loop=self._loop)
+        await asyncio.gather(*awaitables, loop=self.loop)
 
         for subscriber in subscribers:
             subscriber.close()
@@ -253,4 +285,14 @@ class Airbridge:
             subscriber.wait_closed()
             for subscriber in subscribers
         ]
-        await asyncio.gather(*awaitables, loop=self._loop)
+        await asyncio.gather(*awaitables, loop=self.loop)
+
+    async def _maybe_stop_nats_clients(self):
+        if not self.nats_client or self.nats_client.is_closed:
+            return
+
+        if self.nats_streaming_client:
+            await self.nats_streaming_client.close()
+
+        await self.nats_client.flush()
+        await self.nats_client.close()
