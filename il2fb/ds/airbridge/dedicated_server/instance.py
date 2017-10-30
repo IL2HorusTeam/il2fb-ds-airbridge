@@ -319,11 +319,14 @@ class DedicatedServer:
         await self.input(input_line)
         await boot_task
 
-    def stop(self) -> None:
+    async def ask_exit(self) -> Awaitable[None]:
+        await self.input("exit\n")
+
+    def terminate(self) -> None:
         if self._process and self._process.returncode is None:
             self._process.terminate()
 
-    async def wait_stopped(self) -> Awaitable[IntOrNone]:
+    async def wait_finished(self) -> Awaitable[IntOrNone]:
         if self._stream_handling_tasks:
             await asyncio.gather(*self._stream_handling_tasks)
 
@@ -332,5 +335,9 @@ class DedicatedServer:
             return return_code
 
     async def input(self, s: str) -> Awaitable[None]:
-        self._process.stdin.write(s.encode())
-        await self._process.stdin.drain()
+        if self._process:
+            try:
+                self._process.stdin.write(s.encode())
+                await self._process.stdin.drain()
+            except Exception:
+                LOG.exception(f"failed to write string to STDIN (s=`{s}`)")

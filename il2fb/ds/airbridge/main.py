@@ -2,6 +2,7 @@
 
 import argparse
 import asyncio
+import functools
 import logging
 
 from pathlib import Path
@@ -16,6 +17,7 @@ from il2fb.ds.middleware.console.client import ConsoleClient
 from il2fb.ds.middleware.device_link.client import DeviceLinkClient
 
 from il2fb.ds.airbridge.application import Airbridge
+from il2fb.ds.airbridge.compat import IS_WINDOWS
 from il2fb.ds.airbridge.config import load_config
 from il2fb.ds.airbridge.dedicated_server.instance import DedicatedServer
 from il2fb.ds.airbridge.dedicated_server.validators import validate_dedicated_server_config
@@ -88,6 +90,25 @@ async def wait_for_dedicated_server_ports(
     raise RuntimeError("expected ports of dedicated server are closed")
 
 
+def set_exit_handler(loop, handler) -> None:
+    if IS_WINDOWS:
+        try:
+            import win32api
+            win32api.SetConsoleCtrlHandler(handler, True)
+        except ImportError:
+            version = ".".join(map(str, sys.version_info[:2]))
+            raise Exception(f"pypiwin32 is not installed for Python {version}")
+    else:
+        import signal
+        loop.add_signal_handler(signal.SIGINT, handler)
+        loop.add_signal_handler(signal.SIGTERM, handler)
+
+
+def handle_exit(loop, ds, *args, **kwargs) -> None:
+    LOG.info("got signal to exit")
+    loop.create_task(ds.ask_exit())
+
+
 def abort(exit_code: int=-1):
     LOG.fatal("abort")
     raise SystemExit(exit_code)
@@ -103,9 +124,9 @@ def terminate(
     app.stop()
     console_client.close()
     dl_client.close()
-    ds.stop()
+    loop.run_until_complete(ds.ask_exit())
 
-    return_code = loop.run_until_complete(ds.wait_stopped())
+    return_code = loop.run_until_complete(ds.wait_finished())
     if return_code is None:
         return_code = -1
 
@@ -142,7 +163,7 @@ def finish(
 
 
 def run(config: ServerConfig, state: DotAccessDict) -> None:
-    LOG.info("init application")
+    LOG.info("init dedicated server")
 
     loop = asyncio.get_event_loop()
     terminal = Terminal()
@@ -162,15 +183,17 @@ def run(config: ServerConfig, state: DotAccessDict) -> None:
         LOG.fatal("failed to init dedicated server", exc_info=True)
         abort()
 
+    LOG.info("validate config of dedicated server")
+
     try:
         validate_dedicated_server_config(ds.config)
     except ValueError as e:
         LOG.fatal(e)
         abort()
 
-    ds_start_task = loop.create_task(ds.start())
+    LOG.info("start dedicated server")
 
-    LOG.info("wait for server to start")
+    ds_start_task = loop.create_task(ds.start())
 
     try:
         loop.run_until_complete(ds_start_task)
@@ -179,13 +202,15 @@ def run(config: ServerConfig, state: DotAccessDict) -> None:
         LOG.fatal("failed to start dedicated server", exc_info=True)
         abort()
 
+    LOG.info("wait for dedicated server to boot")
+
     try:
         future = wait_for_dedicated_server_ports(loop, ds.pid, ds.config)
         loop.run_until_complete(future)
     except Exception as e:
         LOG.fatal(e)
-        ds.stop()
-        loop.run_until_complete(ds.wait_stopped())
+        ds.terminate()
+        loop.run_until_complete(ds.wait_finished())
         abort()
 
     LOG.info("start input handler")
@@ -193,7 +218,7 @@ def run(config: ServerConfig, state: DotAccessDict) -> None:
     stdin_handler = make_thread_safe_string_handler(loop, ds.input)
     terminal.listen_stdin(handler=stdin_handler)
 
-    LOG.info("init clients")
+    LOG.info("init dedicated server clients")
 
     console_client = ConsoleClient(loop=loop)
     loop.create_task(loop.create_connection(
@@ -221,6 +246,13 @@ def run(config: ServerConfig, state: DotAccessDict) -> None:
         loop=loop,
     ))
 
+    LOG.info("set exit handler")
+
+    exit_handler = functools.partial(handle_exit, loop, ds)
+    set_exit_handler(loop, exit_handler)
+
+    LOG.info("init application")
+
     app = Airbridge(
         loop=loop,
         config=config,
@@ -229,14 +261,15 @@ def run(config: ServerConfig, state: DotAccessDict) -> None:
         console_client=console_client,
         device_link_client=dl_client,
     )
+
+    LOG.info("start application")
+
     app_start_task = loop.create_task(app.start())
     loop.run_until_complete(app_start_task)
 
     try:
         LOG.info("run")
-        loop.run_until_complete(ds.wait_stopped())
-    except KeyboardInterrupt:
-        LOG.warning("interrupted by user")
+        loop.run_until_complete(ds.wait_finished())
     except AirbridgeException:
         LOG.fatal("fatal error has occured")
     except Exception:

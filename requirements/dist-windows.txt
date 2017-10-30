@@ -1,3 +1,4 @@
 -r dist.txt
 
 pyreadline==2.1
+pypiwin32==220
