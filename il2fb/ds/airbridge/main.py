@@ -92,9 +92,9 @@ def set_exit_handler(loop, handler) -> None:
         loop.add_signal_handler(signal.SIGTERM, handler)
 
 
-def handle_exit(loop, ds, *args, **kwargs) -> None:
+def handle_exit(ds, *args, **kwargs) -> None:
     LOG.info("got signal to exit")
-    loop.create_task(ds.ask_exit())
+    ds.ask_exit()
 
 
 def abort(exit_code: int=-1):
@@ -238,7 +238,7 @@ def run(
 
     LOG.info("set exit handler")
 
-    exit_handler = functools.partial(handle_exit, loop, ds)
+    exit_handler = functools.partial(handle_exit, ds)
     set_exit_handler(loop, exit_handler)
 
     LOG.info("init application")
