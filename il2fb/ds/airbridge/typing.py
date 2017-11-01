@@ -1,7 +1,7 @@
 # coding: utf-8
 
 from pathlib import Path
-from typing import Awaitable, Callable, Optional, List, Union
+from typing import Callable, Optional, List, Union
 
 from il2fb.commons.events import Event
 

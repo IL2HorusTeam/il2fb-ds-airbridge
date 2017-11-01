@@ -1,7 +1,5 @@
 # coding: utf-8
 
-import asyncio
-
 from pydoc import locate
 from typing import Any, List, Dict
 

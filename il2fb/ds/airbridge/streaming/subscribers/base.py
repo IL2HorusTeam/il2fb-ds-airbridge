@@ -1,7 +1,6 @@
 # coding: utf-8
 
 import abc
-import asyncio
 
 from typing import Any, Awaitable
 

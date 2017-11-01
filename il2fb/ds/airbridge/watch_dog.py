@@ -10,7 +10,7 @@ from os import stat_result
 
 from ddict import DotAccessDict
 
-from .typing import StringHandler, StringOrPath, IntOrNone
+from .typing import StringHandler, StringOrPath
 
 
 LOG = logging.getLogger(__name__)

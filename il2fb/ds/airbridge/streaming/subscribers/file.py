@@ -1,7 +1,5 @@
 # coding: utf-8
 
-import asyncio
-
 from pathlib import Path
 from typing import Any, Awaitable
 

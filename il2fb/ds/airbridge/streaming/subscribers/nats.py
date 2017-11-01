@@ -3,7 +3,7 @@
 import asyncio
 import logging
 
-from typing import Any, Awaitable, List
+from typing import Any, Awaitable
 
 from nats_stream.aio.publisher import Publisher
 

@@ -7,8 +7,7 @@ import threading
 import queue
 import ssl
 
-from pathlib import Path
-from typing import Awaitable, Callable
+from typing import Awaitable
 
 from ddict import DotAccessDict
 from il2fb.ds.middleware.console.client import ConsoleClient
