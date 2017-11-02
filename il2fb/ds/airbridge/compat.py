@@ -1,6 +1,6 @@
 # coding: utf-8
 
-import platform
+import sys
 
 
-IS_WINDOWS = (platform.system() == 'Windows')
+IS_WINDOWS = (sys.platform == "win32")

@@ -1,7 +1,7 @@
 # coding: utf-8
 
 import shlex
-import platform
+import sys
 
 from pathlib import Path
 from setuptools import setup
@@ -71,7 +71,7 @@ BUILD_TAG = (
 )
 REQUIREMENTS_FILE_NAME = (
     "dist-windows.txt"
-    if platform.system() == 'Windows'
+    if sys.platform == "win32"
     else "dist.txt"
 )
 REQUIREMENTS_FILE_PATH = __here__ / "requirements" / REQUIREMENTS_FILE_NAME
