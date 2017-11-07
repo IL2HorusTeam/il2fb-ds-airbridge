@@ -11,6 +11,8 @@ EventHandler = Callable[[Event], None]
 
 IntOrNone = Optional[int]
 
+BoolOrNone = Optional[bool]
+
 StringProducer = Callable[[], str]
 StringHandler = Callable[[str], None]
 

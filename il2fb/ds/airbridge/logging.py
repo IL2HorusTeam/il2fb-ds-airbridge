@@ -7,7 +7,7 @@ import time
 from functools import partial
 
 
-LOG_FORMAT = "[%(levelname).1s %(asctime)s.%(msecs)03d] %(message)s"
+LOG_FORMAT = "[%(levelname).1s %(asctime)s.%(msecs)03d][%(threadName)-11s] %(message)s"
 LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 

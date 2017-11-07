@@ -1,14 +1,13 @@
 # coding: utf-8
 
+import asyncio
 import configparser
 import functools
 import logging
 import os
-import subprocess
-import threading
 
 from pathlib import Path
-from typing import Callable
+from typing import List, Awaitable
 
 from il2fb.config.ds import ServerConfig
 
@@ -119,14 +118,17 @@ def _is_prompt(char: str, chars: StringList) -> bool:
         return True
 
 
-def _read_stream_until_line(
+async def _read_stream_until_line(
     stream, stream_name, input_line, stop_line, output_handler=None,
     prompt_handler=None,
-) -> None:
+) -> Awaitable:
+
     chars = []
 
+    stop_line_found = False
+
     while True:
-        char = stream.read(1)
+        char = await stream.read(1)
 
         if not char:
             raise EOFError(
@@ -143,29 +145,34 @@ def _read_stream_until_line(
             continue
 
         s, chars = ''.join(chars), []
+
+        if s == stop_line:
+            stop_line_found = True
+
         handler = (
             output_handler
             if is_eol
             else prompt_handler or output_handler
         )
 
-        if s == stop_line:
-            if handler:
-                handler(input_line)
-                handler(stop_line)
-            return
-
         if handler:
+            if stop_line_found and not is_prompt:
+                handler(input_line)
+
             handler(s)
 
+        if stop_line_found and is_prompt:
+            break
 
-def _read_stream_until_end(
+
+async def _read_stream_until_end(
     stream, stream_name, output_handler, prompt_handler=None,
-):
+) -> Awaitable:
+
     chars = []
 
     while True:
-        char = stream.read(1)
+        char = await stream.read(1)
 
         if not char:
             LOG.debug(f"dedicated server's {stream_name} stream was closed")
@@ -193,15 +200,11 @@ def _read_stream_until_end(
         output_handler(s)
 
 
-def _run_with_start_guard(start_event, target):
-    start_event.set()
-    target()
-
-
 class DedicatedServer:
 
     def __init__(
         self,
+        loop: asyncio.AbstractEventLoop,
         exe_path: str,
         config_path: str=None,
         start_script_path: str=None,
@@ -209,8 +212,8 @@ class DedicatedServer:
         stdout_handler: StringHandler=None,
         stderr_handler: StringHandler=None,
         prompt_handler: StringHandler=None,
-        exit_cb: Callable[[], None]=None,
     ):
+        self._loop = loop
         self.exe_path = _try_to_normalize_exe_path(exe_path)
         self.root_dir = self.exe_path.parent
         self.start_script_path = _try_to_normalize_start_script_path(
@@ -244,59 +247,28 @@ class DedicatedServer:
             if prompt_handler
             else None
         )
-        self._exit_cb = exit_cb
 
-        self._thread = None
         self._process = None
-        self._stream_handling_threads = []
-        self._start_event = threading.Event()
-        self._start_error = None
+        self._stream_handling_tasks = []
 
     @property
     def pid(self) -> IntOrNone:
         return self._process and self._process.pid
 
-    def start(self) -> None:
-        LOG.info("start dedicated server")
-
-        if self._thread:
-            raise RuntimeError("dedicated server is already started")
-
-        self._thread = threading.Thread(target=self._run, daemon=True)
-
-        self._start_event.clear()
-        self._thread.start()
-        self._start_event.wait()
-
-        if self._start_error:
-            raise self._start_error
-
-    def _run(self) -> None:
+    async def start(self) -> Awaitable[None]:
         try:
-            self._spawn_process()
+            await self._spawn_process()
             self._maybe_setup_stderr_handler()
-            self._wait_started()
+            await self._wait_started()
             self._maybe_setup_stdout_handler()
         except Exception as e:
             if self._process:
                 self._process.kill()
-                self._process.wait()
+                await self._process.wait()
 
-            self._start_error = e
-        finally:
-            self._start_event.set()
+            raise e
 
-        self._process.wait()
-
-        if self._exit_cb:
-            try:
-                self._exit_cb()
-            except Exception:
-                LOG.exception(
-                    "failed to call exit callback of dedicated server"
-                )
-
-    def _spawn_process(self) -> None:
+    async def _spawn_process(self) -> Awaitable[None]:
         args = (
             []
             if IS_WINDOWS
@@ -307,118 +279,75 @@ class DedicatedServer:
             '-conf', str(self.config_path),
             '-cmd', str(self.start_script_path),
         ])
-        self._process = subprocess.Popen(
-            args,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+
+        kwargs = dict(
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
+        if not IS_WINDOWS:
+            kwargs['start_new_session'] = True
 
-    def _maybe_setup_stderr_handler(self):
-        if self._stderr_handler:
-            target = functools.partial(
-                _read_stream_until_end,
-                stream=self._process.stderr,
-                stream_name="STDERR",
-                output_handler=self._stderr_handler,
-            )
+        self._process = await asyncio.create_subprocess_exec(*args, **kwargs)
 
-            start_event = threading.Event()
-            start_event.clear()
+    def _maybe_setup_stderr_handler(self) -> None:
+        if not self._stderr_handler:
+            return
 
-            thread = threading.Thread(
-                target=_run_with_start_guard,
-                kwargs=dict(
-                    start_event=start_event,
-                    target=target,
-                ),
-                daemon=True,
-            )
+        stream_task = self._loop.create_task(_read_stream_until_end(
+            stream=self._process.stderr,
+            stream_name="STDERR",
+            output_handler=self._stderr_handler,
+        ))
+        self._stream_handling_tasks.append(stream_task)
 
-            self._stream_handling_threads.append(thread)
-            thread.start()
-            start_event.wait()
-        else:
-            self._process.stderr.close()
+    def _maybe_setup_stdout_handler(self) -> None:
+        if not self._stdout_handler:
+            return
 
-    def _maybe_setup_stdout_handler(self):
-        if self._stdout_handler:
-            target = functools.partial(
-                _read_stream_until_end,
-                stream=self._process.stdout,
-                stream_name="STDOUT",
-                output_handler=self._stdout_handler,
-                prompt_handler=self._prompt_handler,
-            )
+        stream_task = self._loop.create_task(_read_stream_until_end(
+            stream=self._process.stdout,
+            stream_name="STDOUT",
+            output_handler=self._stdout_handler,
+            prompt_handler=self._prompt_handler,
+        ))
+        self._stream_handling_tasks.append(stream_task)
 
-            start_event = threading.Event()
-            start_event.clear()
-
-            thread = threading.Thread(
-                target=_run_with_start_guard,
-                kwargs=dict(
-                    start_event=start_event,
-                    target=target,
-                ),
-                daemon=True,
-            )
-
-            self._stream_handling_threads.append(thread)
-            thread.start()
-            start_event.wait()
-        else:
-            self._process.stdout.close()
-
-    def _wait_started(self) -> None:
+    async def _wait_started(self) -> Awaitable[List[asyncio.Task]]:
         input_line = "host\n"
         stop_line = "localhost: Server\n"
 
-        target = functools.partial(
-            _read_stream_until_line,
+        boot_task = self._loop.create_task(_read_stream_until_line(
             stream=self._process.stdout,
             stream_name="STDOUT",
             input_line=input_line,
             stop_line=stop_line,
             output_handler=self._stdout_handler,
             prompt_handler=self._prompt_handler,
-        )
+        ))
 
-        start_event = threading.Event()
-        start_event.clear()
+        await self.input(input_line)
+        await boot_task
 
-        thread = threading.Thread(
-            target=_run_with_start_guard,
-            kwargs=dict(
-                start_event=start_event,
-                target=target,
-            ),
-            daemon=True,
-        )
-        thread.start()
-        start_event.wait()
-
-        self.input(input_line)
-        thread.join()
-
-    def input(self, s: str) -> None:
-        if self._process:
-            try:
-                self._process.stdin.write(s.encode())
-                self._process.stdin.flush()
-            except Exception:
-                LOG.exception(f"failed to write string to STDIN (s='{s}')")
-
-    def ask_exit(self) -> None:
-        self.input("exit\n")
+    async def ask_exit(self) -> Awaitable[None]:
+        await self.input("exit\n")
 
     def terminate(self) -> None:
         if self._process and self._process.returncode is None:
             self._process.terminate()
 
-    def wait_finished(self) -> IntOrNone:
-        for thread in self._stream_handling_threads:
-            thread.join()
+    async def wait_finished(self) -> Awaitable[IntOrNone]:
+        if self._stream_handling_tasks:
+            await asyncio.gather(*self._stream_handling_tasks)
 
         if self._process:
-            self._process.wait()
-            return self._process.returncode
+            return_code = await self._process.wait()
+            return return_code
+
+    async def input(self, s: str) -> Awaitable[None]:
+        if self._process:
+            try:
+                self._process.stdin.write(s.encode())
+                await self._process.stdin.drain()
+            except Exception:
+                LOG.exception(f"failed to write string to STDIN (s={s})")

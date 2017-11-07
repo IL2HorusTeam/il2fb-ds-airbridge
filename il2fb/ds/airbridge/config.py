@@ -160,23 +160,6 @@ CONFIG_SCHEMA = {
                     },
                     'required': ['cluster_id', 'client_id', ],
                 },
-                'tls': {
-                    'type': 'object',
-                    'properties': {
-                        'ca_path': {
-                            'type': 'string',
-                        },
-                        'certificate_path': {
-                            'type': 'string',
-                        },
-                        'private_key_path': {
-                            'type': 'string',
-                        },
-                    },
-                    'required': [
-                        'ca_path', 'certificate_path', 'private_key_path',
-                    ],
-                },
             },
             'required': ['servers', ],
         },

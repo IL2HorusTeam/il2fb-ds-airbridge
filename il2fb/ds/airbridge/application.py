@@ -5,7 +5,6 @@ import itertools
 import logging
 import threading
 import queue
-import ssl
 
 from typing import Awaitable
 
@@ -118,27 +117,8 @@ class Airbridge:
         if not config:
             return
 
-        options = {
-            'servers': config.servers,
-        }
-
-        tls_config = config.tls
-        if tls_config:
-            tls_ctx = ssl.create_default_context(
-                purpose=ssl.Purpose.SERVER_AUTH,
-            )
-            tls_ctx.protocol = ssl.PROTOCOL_TLSv1_2
-            tls_ctx.load_verify_locations(tls_config.ca_path)
-            tls_ctx.load_cert_chain(
-                certfile=tls_config.certificate_path,
-                keyfile=tls_config.private_key_path,
-            )
-            options['tls'] = tls_ctx
-
-        self.nats_client = NATSClient(
-            loop=self.loop,
-        )
-        await self.nats_client.connect(**options)
+        self.nats_client = NATSClient(loop=self.loop)
+        await self.nats_client.connect(servers=config.servers)
 
         streaming_config = config.streaming
         if not streaming_config:
@@ -188,6 +168,7 @@ class Airbridge:
     def _start_game_log_worker(self):
         self._game_log_worker_thread = threading.Thread(
             target=self._game_log_worker.run,
+            name="log worker",
             daemon=True,
         )
         self._game_log_worker_thread.start()
@@ -195,6 +176,7 @@ class Airbridge:
     def _start_game_log_watch_dog(self):
         self._game_log_watch_dog_thread = threading.Thread(
             target=self._game_log_watch_dog.run,
+            name="log watcher",
             daemon=True,
         )
         self._game_log_watch_dog_thread.start()

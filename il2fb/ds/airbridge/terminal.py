@@ -12,8 +12,8 @@ except ImportError:
 
 from colorama import init as init_colors, Fore, Style
 
-from .streams import write_string_to_stream
-from .typing import StringHandler, StringOrNone
+from il2fb.ds.airbridge.streams import write_string_to_stream
+from il2fb.ds.airbridge.typing import StringHandler, StringOrNone
 
 
 LOG = logging.getLogger(__name__)
@@ -48,7 +48,10 @@ class Terminal:
         self._prompt_mutex = threading.Lock()
         self._prompt_not_empty = threading.Condition(self._prompt_mutex)
         self._prompt_has_waiters = True
+
         self._stdin_listener_thread = None
+        self._stdin_listener_event = threading.Event()
+        self._stdin_listener_event.clear()
 
     @staticmethod
     def handle_stdout(s: str) -> None:
@@ -66,10 +69,11 @@ class Terminal:
 
             if (
                 (
-                    (not self._prompt_has_waiters) or
-                    self._stdin_listener_thread is None
-                ) and (
                     value is not None
+                ) and (
+                    (not self._prompt_has_waiters)
+                    or
+                    self._stdin_listener_thread is None
                 )
             ):
                 write_string_to_stdout(colorize_prompt(value))
@@ -92,20 +96,24 @@ class Terminal:
 
     def _reset_prompt(self) -> None:
         self._prompt_value = self._prompt_empty_value
+        self._prompt_has_waiters = True
 
     def listen_stdin(self, handler: StringHandler) -> None:
         with self._prompt_mutex:
             self._stdin_listener_thread = threading.Thread(
                 target=self._listen_stdin,
+                name="stdin",
                 kwargs=dict(
                     handler=handler,
                 ),
                 daemon=True,
             )
             self._stdin_listener_thread.start()
+            self._stdin_listener_event.wait()
 
     def _listen_stdin(self, handler: StringHandler) -> None:
         write_string_to_stdout("\r")
+        self._stdin_listener_event.set()
 
         while True:
             prompt = self._pop_prompt()

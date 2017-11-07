@@ -5,9 +5,10 @@ import asyncio
 import functools
 import logging
 import sys
-import time
+import threading
 
 from pathlib import Path
+from typing import Awaitable, Callable
 
 import psutil
 
@@ -26,12 +27,13 @@ from il2fb.ds.airbridge.exceptions import AirbridgeException
 from il2fb.ds.airbridge.logging import setup_logging
 from il2fb.ds.airbridge.state import track_persistent_state
 from il2fb.ds.airbridge.terminal import Terminal
+from il2fb.ds.airbridge.typing import StringHandler, BoolOrNone
 
 
 LOG = logging.getLogger(__name__)
 
 
-def load_args():
+def load_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Wrapper of dedicated server of "
@@ -49,12 +51,23 @@ def load_args():
     return parser.parse_args()
 
 
-def wait_for_dedicated_server_ports(
+def make_thread_safe_string_handler(
+    loop: asyncio.AbstractEventLoop,
+    handler: StringHandler,
+) -> StringHandler:
+
+    def thread_safe_handler(s: str) -> None:
+        asyncio.run_coroutine_threadsafe(handler(s), loop)
+
+    return thread_safe_handler
+
+
+async def wait_for_dedicated_server_ports(
+    loop: asyncio.AbstractEventLoop,
     pid: int,
     config: ServerConfig,
     timeout: float=3,
-) -> None:
-
+) -> Awaitable[None]:
     process = psutil.Process(pid)
     expected_ports = {
         config.connection.port,
@@ -63,22 +76,38 @@ def wait_for_dedicated_server_ports(
     }
 
     while timeout > 0:
-        start_time = time.monotonic()
+        start_time = loop.time()
 
         actual_ports = {c.laddr.port for c in process.connections('inet')}
         if actual_ports == expected_ports:
             return
 
         delay = min(timeout, 0.1)
-        time.sleep(delay)
+        await asyncio.sleep(delay, loop=loop)
 
-        time_delta = time.monotonic() - start_time
+        time_delta = loop.time() - start_time
         timeout = max(0, timeout - time_delta)
 
     raise RuntimeError("expected ports of dedicated server are closed")
 
 
-def set_exit_handler(loop, handler) -> None:
+def wrap_exit_handler(thread, exit_handler) -> BoolOrNone:
+
+    def wrapped_exit_handler(*args, **kwargs):
+        if IS_WINDOWS:
+            threading.current_thread().name = "exit worker"
+
+        LOG.info("got signal to exit")
+        exit_handler()
+
+        if IS_WINDOWS:
+            thread.join()
+            return True
+
+    return wrapped_exit_handler
+
+
+def set_exit_handler(loop: asyncio.AbstractEventLoop, handler) -> None:
     if IS_WINDOWS:
         try:
             import win32api
@@ -92,79 +121,110 @@ def set_exit_handler(loop, handler) -> None:
         loop.add_signal_handler(signal.SIGTERM, handler)
 
 
-def handle_exit(ds, *args, **kwargs) -> None:
-    LOG.info("got signal to exit")
-    ds.ask_exit()
-
-
 def abort(exit_code: int=-1):
     LOG.fatal("abort")
     raise SystemExit(exit_code)
 
 
-def terminate(
+def run_app(
     loop: asyncio.AbstractEventLoop,
-    ds: DedicatedServer,
-    app: Airbridge,
-    console_client: ConsoleClient,
-    dl_client: DeviceLinkClient,
-):
-    app.stop()
-    console_client.close()
-    dl_client.close()
-
-    ds.ask_exit()
-    return_code = ds.wait_finished()
-
-    if return_code is None:
-        return_code = -1
-
-    loop.run_until_complete(asyncio.gather(
-        app.wait_stopped(),
-        console_client.wait_closed(),
-        dl_client.wait_closed(),
-        loop=loop,
-    ))
-
-    LOG.fatal("terminate")
-    raise SystemExit(return_code)
-
-
-def finish(
-    loop: asyncio.AbstractEventLoop,
-    app: Airbridge,
-    console_client: ConsoleClient,
-    dl_client: DeviceLinkClient,
-):
-    app.stop()
-    console_client.close()
-    dl_client.close()
-
-    loop.run_until_complete(asyncio.gather(
-        app.wait_stopped(),
-        console_client.wait_closed(),
-        dl_client.wait_closed(),
-        loop=loop,
-    ))
-
-    LOG.info("exit")
-    raise SystemExit(0)
-
-
-def run(
-    loop: asyncio.AbstractEventLoop,
+    dedicated_server: DedicatedServer,
     config: ServerConfig,
     state: DotAccessDict,
+    start_ack: Callable[[], None],
+    error_ack: Callable[[], None],
+    stop_request: Awaitable[None],
 ) -> None:
+    asyncio.set_event_loop(loop)
+
+    LOG.info("init dedicated server clients")
+
+    console_client = ConsoleClient(loop=loop)
+    loop.create_task(loop.create_connection(
+        protocol_factory=lambda: console_client,
+        host=dedicated_server.config.connection.host or "localhost",
+        port=dedicated_server.config.console.connection.port,
+    ))
+
+    device_link_address = (
+        dedicated_server.config.device_link.connection.host or "localhost",
+        dedicated_server.config.device_link.connection.port,
+    )
+    device_link_client = DeviceLinkClient(
+        loop=loop,
+        remote_address=device_link_address,
+    )
+
+    loop.create_task(loop.create_datagram_endpoint(
+        protocol_factory=lambda: device_link_client,
+        remote_addr=device_link_client.remote_address,
+    ))
+
+    loop.run_until_complete(asyncio.gather(
+        console_client.wait_connected(),
+        device_link_client.wait_connected(),
+        loop=loop,
+    ))
+
+    LOG.info("create application")
+
+    app = Airbridge(
+        loop=loop,
+        config=config,
+        state=state,
+        dedicated_server=dedicated_server,
+        console_client=console_client,
+        device_link_client=device_link_client,
+    )
+
+    LOG.info("start application")
+
+    app_start_task = loop.create_task(app.start())
+    loop.run_until_complete(app_start_task)
+    start_ack()
+
+    try:
+        LOG.info("run application until stop is requested")
+        loop.run_until_complete(stop_request)
+    except AirbridgeException:
+        LOG.fatal("fatal error has occured")
+    except Exception:
+        LOG.fatal("fatal error has occured", exc_info=True)
+        error_ack()
+    else:
+        LOG.info("application stop was requested")
+        error_ack()
+    finally:
+        app.stop()
+        console_client.close()
+        device_link_client.close()
+
+        loop.run_until_complete(asyncio.gather(
+            app.wait_stopped(),
+            console_client.wait_closed(),
+            device_link_client.wait_closed(),
+            loop=loop,
+        ))
+
+
+def run(config: ServerConfig, state: DotAccessDict) -> None:
+    main_thread = threading.current_thread()
+    main_thread.name = "main"
+
     LOG.info("init dedicated server")
+
+    main_loop = (
+        asyncio.ProactorEventLoop()
+        if IS_WINDOWS
+        else asyncio.SelectorEventLoop()
+    )
+    asyncio.set_event_loop(main_loop)
 
     terminal = Terminal()
 
-    ds_exit_future = asyncio.Future(loop=loop)
-    ds_exit_function = functools.partial(ds_exit_future.set_result, None)
-
     try:
         ds = DedicatedServer(
+            loop=main_loop,
             exe_path=config.ds.exe_path,
             config_path=config.ds.get('config_path'),
             start_script_path=config.ds.get('start_script_path'),
@@ -172,7 +232,6 @@ def run(
             stdout_handler=terminal.handle_stdout,
             stderr_handler=terminal.handle_stderr,
             prompt_handler=terminal.handle_prompt,
-            exit_cb=ds_exit_function,
         )
     except Exception:
         LOG.fatal("failed to init dedicated server", exc_info=True)
@@ -186,99 +245,103 @@ def run(
         LOG.fatal(e)
         abort()
 
-    LOG.info("wait for dedicated server to boot")
+    LOG.info("start dedicated server")
+
+    ds_start_task = main_loop.create_task(ds.start())
 
     try:
-        ds.start()
+        main_loop.run_until_complete(ds_start_task)
     except Exception:
+        ds_start_task.cancel()
         LOG.fatal("failed to start dedicated server", exc_info=True)
         abort()
 
-    LOG.info("wait for dedicated server to open ports")
+    LOG.info("wait for dedicated server to boot")
 
     try:
-        wait_for_dedicated_server_ports(ds.pid, ds.config)
+        future = wait_for_dedicated_server_ports(main_loop, ds.pid, ds.config)
+        main_loop.run_until_complete(future)
     except Exception as e:
         LOG.fatal(e)
         ds.terminate()
-        ds.wait_finished()
+        main_loop.run_until_complete(ds.wait_finished())
         abort()
 
     LOG.info("start input handler")
 
-    terminal.listen_stdin(handler=ds.input)
+    stdin_handler = make_thread_safe_string_handler(main_loop, ds.input)
+    terminal.listen_stdin(handler=stdin_handler)
 
-    LOG.info("init dedicated server clients")
+    LOG.info("prepare for application start")
 
-    console_client = ConsoleClient(loop=loop)
-    loop.create_task(loop.create_connection(
-        protocol_factory=lambda: console_client,
-        host=(ds.config.connection.host or "localhost"),
-        port=ds.config.console.connection.port,
-    ))
+    app_loop = asyncio.SelectorEventLoop()
 
-    dl_address = (
-        (ds.config.device_link.connection.host or "localhost"),
-        ds.config.device_link.connection.port,
+    app_start_event = asyncio.Event(loop=main_loop)
+    app_start_event.clear()
+
+    app_stop_event = asyncio.Event(loop=app_loop)
+    app_stop_event.clear()
+
+    app_start_ack = functools.partial(
+        main_loop.call_soon_threadsafe,
+        app_start_event.set,
     )
-    dl_client = DeviceLinkClient(
-        remote_address=dl_address,
-        loop=loop,
+    app_error_ack = functools.partial(
+        main_loop.call_soon_threadsafe,
+        ds.ask_exit,
     )
-    loop.create_task(loop.create_datagram_endpoint(
-        protocol_factory=lambda: dl_client,
-        remote_addr=dl_address,
-    ))
+    app_stop_request = app_stop_event.wait()
 
-    loop.run_until_complete(asyncio.gather(
-        console_client.wait_connected(),
-        dl_client.wait_connected(),
-        loop=loop,
-    ))
+    app_thread = threading.Thread(
+        target=run_app,
+        name="application",
+        kwargs=dict(
+            loop=app_loop,
+            dedicated_server=ds,
+            config=config,
+            state=state,
+            start_ack=app_start_ack,
+            error_ack=app_error_ack,
+            stop_request=app_stop_request,
+        ),
+        daemon=True,
+    )
+
+    app_thread.start()
+    app_start_event.wait()
 
     LOG.info("set exit handler")
 
-    exit_handler = functools.partial(handle_exit, ds)
-    set_exit_handler(loop, exit_handler)
-
-    LOG.info("init application")
-
-    app = Airbridge(
-        loop=loop,
-        config=config,
-        state=state,
-        dedicated_server=ds,
-        console_client=console_client,
-        device_link_client=dl_client,
-    )
-
-    LOG.info("start application")
-
-    app_start_task = loop.create_task(app.start())
-    loop.run_until_complete(app_start_task)
+    exit_handler = functools.partial(main_loop.create_task, ds.ask_exit())
+    exit_handler = wrap_exit_handler(main_thread, exit_handler)
+    set_exit_handler(main_loop, exit_handler)
 
     try:
-        LOG.info("run")
-        loop.run_until_complete(ds_exit_future)
-    except AirbridgeException:
-        LOG.fatal("fatal error has occured")
+        LOG.info("wait for dedicated server to exit")
+        return_code = main_loop.run_until_complete(ds.wait_finished())
+    except KeyboardInterrupt:
+        pass
     except Exception:
-        LOG.fatal("fatal error has occured", exc_info=True)
+        LOG.fatal("failed to wait for dedicated server to exit", exc_info=True)
+        return_code = -1
     else:
-        finish(loop, app, console_client, dl_client)
+        LOG.info(f"dedicated server has exited (return_code={return_code})")
+    finally:
+        app_loop.call_soon_threadsafe(app_stop_event.set)
+        app_thread.join()
 
-    terminate(loop, ds, app, console_client, dl_client)
+        LOG.info("exit")
+        raise SystemExit(return_code)
 
 
-def main():
+def main() -> None:
     args = load_args()
-    loop = asyncio.get_event_loop()
-    config = load_config(args.config_path)
 
+    config = load_config(args.config_path)
     setup_logging(config.logging)
 
     with track_persistent_state(config.state.file_path) as state:
-        run(loop, config, state)
+        run(config, state)
 
 
 if __name__ == '__main__':
