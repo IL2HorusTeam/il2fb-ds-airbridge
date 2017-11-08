@@ -179,14 +179,14 @@ def run_main(config: ServerConfig, state: DotAccessDict) -> None:
     main_thread = threading.current_thread()
     main_thread.name = "main"
 
-    LOG.info("init dedicated server")
-
     main_loop = (
         asyncio.ProactorEventLoop()
         if IS_WINDOWS
         else asyncio.SelectorEventLoop()
     )
     asyncio.set_event_loop(main_loop)
+
+    LOG.info("init dedicated server")
 
     terminal = Terminal()
 
