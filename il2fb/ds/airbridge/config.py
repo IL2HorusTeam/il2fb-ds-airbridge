@@ -10,7 +10,7 @@ from jsonschema import validate
 CONFIG_SCHEMA = {
     'type': 'object',
     'properties': {
-        'debug': {
+        'trace': {
             'type': 'boolean',
         },
         'ds': {
@@ -243,7 +243,7 @@ CONFIG_SCHEMA = {
 
 
 CONFIG_DEFAULTS = {
-    'debug': False,
+    'trace': False,
     'logging': {
         'files': {
             'main': {
