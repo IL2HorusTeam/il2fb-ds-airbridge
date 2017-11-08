@@ -17,14 +17,16 @@ from il2fb.ds.airbridge.dedicated_server.console import ConsoleProxy
 from il2fb.ds.airbridge.dedicated_server.device_link import DeviceLinkProxy
 from il2fb.ds.airbridge.dedicated_server.instance import DedicatedServer
 from il2fb.ds.airbridge.dedicated_server.game_log import GameLogWorker
-from il2fb.ds.airbridge.nats import NATSClient, NATSStreamingClient
-from il2fb.ds.airbridge.streaming.facilities import (
-    ChatStreamingFacility, EventsStreamingFacility,
-    NotParsedStringsStreamingFacility,
-)
-from il2fb.ds.airbridge.streaming.subscribers.loaders import (
-    load_subscribers_from_config,
-)
+
+from il2fb.ds.airbridge.nats import NATSClient
+from il2fb.ds.airbridge.nats import NATSStreamingClient
+from il2fb.ds.airbridge.nats import NATSSubscriber
+
+from il2fb.ds.airbridge.streaming.facilities import ChatStreamingFacility
+from il2fb.ds.airbridge.streaming.facilities import EventsStreamingFacility
+from il2fb.ds.airbridge.streaming.facilities import NotParsedStringsStreamingFacility
+
+from il2fb.ds.airbridge.streaming.subscribers.loaders import load_subscribers_from_config
 from il2fb.ds.airbridge.watch_dog import TextFileWatchDog
 
 
@@ -104,6 +106,7 @@ class Airbridge:
 
         self.nats_client = None
         self.nats_streaming_client = None
+        self._nats_subscriber = None
 
     async def start(self) -> Awaitable[None]:
         await self._maybe_start_nats_clients()
@@ -119,6 +122,14 @@ class Airbridge:
 
         self.nats_client = NATSClient(loop=self.loop)
         await self.nats_client.connect(servers=config.servers)
+
+        subscription_config = config.subscription
+        if subscription_config:
+            self._nats_subscriber = NATSSubscriber(
+                app=self,
+                subject=subscription_config.subject,
+            )
+            await self._nats_subscriber.start()
 
         streaming_config = config.streaming
         if not streaming_config:
@@ -290,6 +301,9 @@ class Airbridge:
 
         if self.nats_streaming_client:
             await self.nats_streaming_client.close()
+
+        if self._nats_subscriber:
+            await self._nats_subscriber.stop()
 
         await self.nats_client.flush()
         await self.nats_client.close()

@@ -6,7 +6,7 @@ import logging
 from typing import Awaitable, List
 
 from nats.aio.client import (
-    Client, DEFAULT_RECONNECT_TIME_WAIT, DEFAULT_PING_INTERVAL,
+    Client, Msg, DEFAULT_RECONNECT_TIME_WAIT, DEFAULT_PING_INTERVAL,
     DEFAULT_MAX_OUTSTANDING_PINGS, DEFAULT_MAX_FLUSHER_QUEUE_SIZE,
 )
 from nats_stream.aio.client import StreamClient, DEFAULT_CONNECT_WAIT
@@ -123,3 +123,27 @@ class NATSStreamingClient(StreamClient):
             verbose=verbose,
             **options
         )
+
+
+class NATSSubscriber:
+
+    def __init__(self, app, subject):
+        self._app = app
+        self._subject = subject
+        self._ssid = None
+
+    async def start(self) -> Awaitable[None]:
+        self._ssid = await self._app.nats_client.subscribe(
+            subject=self._subject,
+            cb=self._handle_message,
+        )
+        LOG.info(f"subscribed to nats subject '{self._subject}'")
+
+    async def stop(self) -> Awaitable[None]:
+        await self._app.nats_client.unsubscribe(
+            ssid=self._ssid,
+        )
+        LOG.info(f"unsubscribed from nats subject '{self._subject}'")
+
+    async def _handle_message(self, msg: Msg) -> Awaitable[None]:
+        LOG.debug(f"nats msg: {msg.data}, {msg.reply}")

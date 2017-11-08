@@ -148,6 +148,15 @@ CONFIG_SCHEMA = {
                         'uniqueItems': True,
                     },
                 },
+                'subscription': {
+                    'type': 'object',
+                    'properties': {
+                        'subject': {
+                            'type': 'string',
+                        },
+                    },
+                    'required': ['subject', ],
+                },
                 'streaming': {
                     'type': 'object',
                     'properties': {
