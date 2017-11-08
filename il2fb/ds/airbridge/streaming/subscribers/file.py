@@ -17,7 +17,7 @@ class TextFileStreamingSink(StreamingSubscriber):
         self._stream = None
         self._stat = None
 
-    def open(self):
+    def open(self) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._stream = self._path.open('a', buffering=1)
         self._stat = self._path.lstat()
@@ -27,7 +27,7 @@ class TextFileStreamingSink(StreamingSubscriber):
         self._stream.write(s + '\n')
         self._stream.flush()
 
-    def _maybe_reopen(self):
+    def _maybe_reopen(self) -> None:
         try:
             stat = self._path.lstat()
         except FileNotFoundError:
@@ -41,7 +41,7 @@ class TextFileStreamingSink(StreamingSubscriber):
             self.close()
             self.open()
 
-    def close(self):
+    def close(self) -> None:
         try:
             self._stream.flush()
         finally:

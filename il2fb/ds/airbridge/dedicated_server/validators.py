@@ -3,9 +3,10 @@
 import os
 
 from il2fb.config.ds import ServerConfig
+from il2fb.ds.airbridge.typing import StringOrPath
 
 
-def validate_dedicated_server_file_access(file_path):
+def validate_dedicated_server_file_access(file_path: StringOrPath) -> None:
     if not os.access(file_path, os.F_OK):
         raise FileNotFoundError(
             f"file does not exist (path='{file_path}')"

@@ -113,7 +113,7 @@ class ConsoleProxy:
     async def start(self) -> Awaitable[None]:
         self._server = await self._loop.create_server(
             lambda: ConsoleConnection(loop=self._loop, registry=self),
-            (self._config.bind.address or "localhost"),
+            self._config.bind.address or "localhost",
             self._config.bind.port,
         )
 

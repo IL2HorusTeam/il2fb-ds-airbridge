@@ -10,7 +10,7 @@ from os import stat_result
 
 from ddict import DotAccessDict
 
-from .typing import StringHandler, StringOrPath
+from il2fb.ds.airbridge.typing import StringHandler, StringOrPath
 
 
 LOG = logging.getLogger(__name__)
@@ -88,7 +88,7 @@ class TextFileWatchDog:
             f.seek(self._state.offset)
             self._read_lines(f)
 
-    def _reset_state_if_file_was_recreated(self):
+    def _reset_state_if_file_was_recreated(self) -> None:
         stat = self._get_actual_stat()
 
         if (
@@ -99,12 +99,12 @@ class TextFileWatchDog:
             self._state.inode = stat.st_ino
             self._state.offset = 0
 
-    def _clear_state(self):
+    def _clear_state(self) -> None:
         self._state.device = None
         self._state.inode = None
         self._state.offset = 0
 
-    def _wait_for_file_to_get_created(self):
+    def _wait_for_file_to_get_created(self) -> None:
         while not self._path.exists():
             self._sleep_and_maybe_stop()
 

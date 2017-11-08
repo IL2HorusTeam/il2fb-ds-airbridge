@@ -3,10 +3,11 @@
 import asyncio
 import configparser
 import functools
+import io
 import logging
 
 from pathlib import Path
-from typing import List, Awaitable
+from typing import List, Awaitable, Optional
 
 import psutil
 
@@ -31,7 +32,7 @@ def _try_to_load_config(path: str) -> ServerConfig:
     return ServerConfig.from_ini(ini)
 
 
-def _try_to_handle_string(handler, s: str) -> None:
+def _try_to_handle_string(handler: StringHandler, s: str) -> None:
     try:
         handler(s)
     except Exception:
@@ -55,8 +56,12 @@ def _is_prompt(char: str, chars: StringList) -> bool:
 
 
 async def _read_stream_until_line(
-    stream, stream_name, input_line, stop_line, output_handler=None,
-    prompt_handler=None,
+    stream: io.RawIOBase,
+    stream_name: str,
+    input_line: str,
+    stop_line: str,
+    output_handler: Optional[StringHandler]=None,
+    prompt_handler: Optional[StringHandler]=None,
 ) -> Awaitable:
 
     chars = []
@@ -102,7 +107,10 @@ async def _read_stream_until_line(
 
 
 async def _read_stream_until_end(
-    stream, stream_name, output_handler, prompt_handler=None,
+    stream: io.RawIOBase,
+    stream_name: str,
+    output_handler: StringHandler,
+    prompt_handler: Optional[StringHandler]=None,
 ) -> Awaitable:
 
     chars = []

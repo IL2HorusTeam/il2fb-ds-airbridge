@@ -17,6 +17,7 @@ def load_subscriber(
     cls_name: str,
     params: Dict[str, Any],
 ) -> StreamingSubscriber:
+
     cls_name = str(CLASS_NAMES_SHORTCUTS.get(cls_name, cls_name))
     cls = locate(cls_name)
 
@@ -32,6 +33,7 @@ def load_subscribers_from_config(
     app,
     config: Dict[str, Dict[str, Any]],
 ) -> List[StreamingSubscriber]:
+
     return [
         load_subscriber(app, cls_name, params)
         for cls_name, params in config.items()

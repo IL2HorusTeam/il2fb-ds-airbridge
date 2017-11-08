@@ -3,7 +3,7 @@
 import asyncio
 import logging
 
-from typing import Awaitable
+from typing import Awaitable, List
 
 from nats.aio.client import (
     Client, DEFAULT_RECONNECT_TIME_WAIT, DEFAULT_PING_INTERVAL,
@@ -32,17 +32,17 @@ class NATSClient(Client):
 
     async def connect(
         self,
-        servers,
-        name=None,
-        pedantic=False,
-        verbose=False,
-        reconnect_time_wait=DEFAULT_RECONNECT_TIME_WAIT,
-        ping_interval=DEFAULT_PING_INTERVAL,
-        max_outstanding_pings=DEFAULT_MAX_OUTSTANDING_PINGS,
-        dont_randomize=False,
-        flusher_queue_size=DEFAULT_MAX_FLUSHER_QUEUE_SIZE,
-        tls=None,
+        servers: List[str],
+        name: str=None,
+        pedantic: bool=False,
+        verbose: bool=False,
+        reconnect_time_wait: int=DEFAULT_RECONNECT_TIME_WAIT,
+        ping_interval: int=DEFAULT_PING_INTERVAL,
+        max_outstanding_pings: int=DEFAULT_MAX_OUTSTANDING_PINGS,
+        dont_randomize: bool=False,
+        flusher_queue_size: int=DEFAULT_MAX_FLUSHER_QUEUE_SIZE,
     ) -> Awaitable[None]:
+
         await super().connect(
             io_loop=self._loop,
             servers=servers,
@@ -59,7 +59,6 @@ class NATSClient(Client):
             max_outstanding_pings=max_outstanding_pings,
             dont_randomize=dont_randomize,
             flusher_queue_size=flusher_queue_size,
-            tls=tls,
 
             disconnected_cb=self._handle_disconnection,
             reconnected_cb=self._handle_reconnection,
@@ -108,12 +107,13 @@ class NATSStreamingClient(StreamClient):
 
     async def connect(
         self,
-        cluster_id,
-        client_id,
-        connect_timeout=DEFAULT_CONNECT_WAIT,
-        verbose=False,
+        cluster_id: str,
+        client_id: str,
+        connect_timeout: int=DEFAULT_CONNECT_WAIT,
+        verbose: bool=False,
         **options
     ) -> Awaitable[None]:
+
         await super().connect(
             cluster_id=cluster_id,
             client_id=client_id,
