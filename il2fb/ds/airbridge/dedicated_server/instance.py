@@ -208,12 +208,12 @@ class DedicatedServer:
             self._maybe_setup_stderr_handler()
             await self._wait_started()
             self._maybe_setup_stdout_handler()
-        except Exception as e:
+        except Exception:
             if self._process:
                 self._process.kill()
                 await self._process.wait()
 
-            raise e
+            raise
 
     async def _spawn_process(self) -> Awaitable[None]:
         args = (
