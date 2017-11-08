@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import io
 import logging
 import math
 import sys
@@ -12,7 +13,6 @@ except ImportError:
 
 from colorama import init as init_colors, Fore, Style
 
-from il2fb.ds.airbridge.streams import write_string_to_stream
 from il2fb.ds.airbridge.typing import StringHandler, StringOrNone
 
 
@@ -27,6 +27,11 @@ def colorize_prompt(s: str) -> str:
 
 def colorize_error(s: str) -> str:
     return f"{Fore.RED}{s}{Style.RESET_ALL}"
+
+
+def write_string_to_stream(stream: io.RawIOBase, s: str) -> None:
+    stream.write(s)
+    stream.flush()
 
 
 def write_string_to_stdout(s: str) -> None:
