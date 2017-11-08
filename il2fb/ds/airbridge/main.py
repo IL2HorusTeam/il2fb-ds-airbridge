@@ -107,7 +107,10 @@ def run_app(
 
     LOG.info("init dedicated server clients")
 
-    console_client = ConsoleClient(loop=loop)
+    console_client = ConsoleClient(
+        loop=loop,
+        trace=config.logging.trace,
+    )
     loop.create_task(loop.create_connection(
         protocol_factory=lambda: console_client,
         host=dedicated_server.config.connection.host or "localhost",
@@ -121,6 +124,7 @@ def run_app(
     device_link_client = DeviceLinkClient(
         loop=loop,
         remote_address=device_link_address,
+        trace=config.logging.trace,
     )
 
     loop.create_task(loop.create_datagram_endpoint(

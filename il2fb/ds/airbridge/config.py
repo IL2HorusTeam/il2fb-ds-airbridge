@@ -10,9 +10,6 @@ from jsonschema import validate
 CONFIG_SCHEMA = {
     'type': 'object',
     'properties': {
-        'trace': {
-            'type': 'boolean',
-        },
         'ds': {
             'type': 'object',
             'properties': {
@@ -67,6 +64,9 @@ CONFIG_SCHEMA = {
         'logging': {
             'type': 'object',
             'properties': {
+                'trace': {
+                    'type': 'boolean',
+                },
                 'files': {
                     'type': 'object',
                     'properties': {
@@ -243,8 +243,8 @@ CONFIG_SCHEMA = {
 
 
 CONFIG_DEFAULTS = {
-    'trace': False,
     'logging': {
+        'trace': False,
         'files': {
             'main': {
                 'file_path': 'airbridge.log',
