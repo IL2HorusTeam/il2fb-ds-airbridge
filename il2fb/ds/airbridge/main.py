@@ -10,8 +10,6 @@ import threading
 from pathlib import Path
 from typing import Awaitable, Callable
 
-import psutil
-
 from ddict import DotAccessDict
 
 from il2fb.config.ds import ServerConfig
@@ -60,35 +58,6 @@ def make_thread_safe_string_handler(
         asyncio.run_coroutine_threadsafe(handler(s), loop)
 
     return thread_safe_handler
-
-
-async def wait_for_dedicated_server_ports(
-    loop: asyncio.AbstractEventLoop,
-    pid: int,
-    config: ServerConfig,
-    timeout: float=3,
-) -> Awaitable[None]:
-    process = psutil.Process(pid)
-    expected_ports = {
-        config.connection.port,
-        config.console.connection.port,
-        config.device_link.connection.port,
-    }
-
-    while timeout > 0:
-        start_time = loop.time()
-
-        actual_ports = {c.laddr.port for c in process.connections('inet')}
-        if actual_ports == expected_ports:
-            return
-
-        delay = min(timeout, 0.1)
-        await asyncio.sleep(delay, loop=loop)
-
-        time_delta = loop.time() - start_time
-        timeout = max(0, timeout - time_delta)
-
-    raise RuntimeError("expected ports of dedicated server are closed")
 
 
 def wrap_exit_handler(thread, exit_handler) -> BoolOrNone:
@@ -259,8 +228,7 @@ def run(config: ServerConfig, state: DotAccessDict) -> None:
     LOG.info("wait for dedicated server to boot")
 
     try:
-        future = wait_for_dedicated_server_ports(main_loop, ds.pid, ds.config)
-        main_loop.run_until_complete(future)
+        main_loop.run_until_complete(ds.wait_network_listeners())
     except Exception as e:
         LOG.fatal(e)
         ds.terminate()

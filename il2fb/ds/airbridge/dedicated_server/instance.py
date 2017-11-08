@@ -9,6 +9,8 @@ import os
 from pathlib import Path
 from typing import List, Awaitable
 
+import psutil
+
 from il2fb.config.ds import ServerConfig
 
 from il2fb.ds.airbridge.compat import IS_WINDOWS
@@ -249,6 +251,8 @@ class DedicatedServer:
         )
 
         self._process = None
+        self._process_utils = None
+
         self._stream_handling_tasks = []
 
     @property
@@ -289,6 +293,7 @@ class DedicatedServer:
             kwargs['start_new_session'] = True
 
         self._process = await asyncio.create_subprocess_exec(*args, **kwargs)
+        self._process_utils = psutil.Process(self._process.pid)
 
     def _maybe_setup_stderr_handler(self) -> None:
         if not self._stderr_handler:
@@ -328,6 +333,36 @@ class DedicatedServer:
 
         await self.input(input_line)
         await boot_task
+
+    async def wait_network_listeners(
+        self,
+        timeout: float=3,
+    ) -> Awaitable[None]:
+
+        expected_ports = {
+            self.config.connection.port,
+            self.config.console.connection.port,
+            self.config.device_link.connection.port,
+        }
+
+        while timeout > 0:
+            start_time = self._loop.time()
+
+            actual_ports = {
+                c.laddr.port
+                for c in self._process_utils.connections('inet')
+            }
+
+            if actual_ports == expected_ports:
+                return
+
+            delay = min(timeout, 0.1)
+            await asyncio.sleep(delay, loop=self._loop)
+
+            time_delta = self._loop.time() - start_time
+            timeout = max(0, timeout - time_delta)
+
+        raise RuntimeError("expected ports of dedicated server are closed")
 
     async def ask_exit(self) -> Awaitable[None]:
         await self.input("exit\n")
