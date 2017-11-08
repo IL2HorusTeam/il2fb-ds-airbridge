@@ -176,7 +176,7 @@ def run_app(
         ))
 
 
-def run(config: ServerConfig, state: DotAccessDict) -> None:
+def run_main(config: ServerConfig, state: DotAccessDict) -> None:
     main_thread = threading.current_thread()
     main_thread.name = "main"
 
@@ -309,7 +309,7 @@ def main() -> None:
     setup_logging(config.logging)
 
     with track_persistent_state(config.state.file_path) as state:
-        run(config, state)
+        run_main(config, state)
 
 
 if __name__ == '__main__':
