@@ -20,7 +20,6 @@ from il2fb.ds.airbridge.application import Airbridge
 from il2fb.ds.airbridge.compat import IS_WINDOWS
 from il2fb.ds.airbridge.config import load_config
 from il2fb.ds.airbridge.dedicated_server.instance import DedicatedServer
-from il2fb.ds.airbridge.dedicated_server.validators import validate_dedicated_server_config
 from il2fb.ds.airbridge.exceptions import AirbridgeException
 from il2fb.ds.airbridge.logging import setup_logging
 from il2fb.ds.airbridge.state import track_persistent_state
@@ -204,14 +203,6 @@ def run_main(config: ServerConfig, state: DotAccessDict) -> None:
         )
     except Exception:
         LOG.fatal("failed to init dedicated server", exc_info=True)
-        abort()
-
-    LOG.info("validate config of dedicated server")
-
-    try:
-        validate_dedicated_server_config(ds.config)
-    except ValueError as e:
-        LOG.fatal(e)
         abort()
 
     LOG.info("start dedicated server")

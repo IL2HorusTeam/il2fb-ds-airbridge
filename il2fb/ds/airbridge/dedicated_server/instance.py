@@ -4,7 +4,6 @@ import asyncio
 import configparser
 import functools
 import logging
-import os
 
 from pathlib import Path
 from typing import List, Awaitable
@@ -15,80 +14,15 @@ from il2fb.config.ds import ServerConfig
 
 from il2fb.ds.airbridge.compat import IS_WINDOWS
 from il2fb.ds.airbridge.typing import IntOrNone, StringHandler, StringList
+from il2fb.ds.airbridge.dedicated_server.path import (
+    normalize_exe_path, normalize_config_path, normalize_start_script_path,
+)
+from il2fb.ds.airbridge.dedicated_server.validators import (
+    validate_dedicated_server_file_access, validate_dedicated_server_config,
+)
 
 
 LOG = logging.getLogger(__name__)
-
-DEFAULT_CONFIG_NAME = "confs.ini"
-DEFAULT_START_SCRIPT_NAME = "server.cmd"
-
-
-def _try_to_normalize_exe_path(initial: str) -> Path:
-    path = Path(initial).resolve()
-
-    if not os.access(path, os.F_OK):
-        raise FileNotFoundError(
-            f"dedicated server's executable does not exist (path='{path}')"
-        )
-
-    if not os.access(path, os.X_OK):
-        raise PermissionError(
-            f"dedicated server's executable cannot be executed (path='{path}')"
-        )
-
-    return path
-
-
-def _try_to_normalize_config_path(
-    root_dir: Path,
-    initial: str=None,
-    default_name: str=DEFAULT_CONFIG_NAME,
-) -> Path:
-
-    if initial is None:
-        path = root_dir / default_name
-    elif os.path.sep in initial:
-        path = Path(initial).resolve()
-    else:
-        path = root_dir / initial
-
-    if not os.access(path, os.F_OK):
-        raise FileNotFoundError(
-            f"dedicated server's config does not exist (path='{path}')"
-        )
-
-    if not os.access(path, os.R_OK):
-        raise PermissionError(
-            f"dedicated server's config cannot be read (path='{path}')"
-        )
-
-    return path
-
-
-def _try_to_normalize_start_script_path(
-    root_dir: Path,
-    initial: str=None,
-    default_name: str=DEFAULT_START_SCRIPT_NAME,
-) -> Path:
-
-    if initial is None:
-        path = root_dir / default_name
-    elif os.path.sep in initial:
-        path = Path(initial).resolve()
-    else:
-        path = root_dir / initial
-
-    if not os.access(path, os.F_OK):
-        raise FileNotFoundError(
-            f"dedicated server's start script does not exist (path='{path}')"
-        )
-
-    if not os.access(path, os.R_OK):
-        raise PermissionError(
-            f"dedicated server's start script cannot be read (path='{path}')"
-        )
-
-    return path
 
 
 def _try_to_load_config(path: str) -> ServerConfig:
@@ -208,27 +142,36 @@ class DedicatedServer:
         self,
         loop: asyncio.AbstractEventLoop,
         exe_path: str,
-        config_path: str=None,
         start_script_path: str=None,
+        config_path: str=None,
         wine_bin_path: str="wine",
         stdout_handler: StringHandler=None,
         stderr_handler: StringHandler=None,
         prompt_handler: StringHandler=None,
     ):
         self._loop = loop
-        self.exe_path = _try_to_normalize_exe_path(exe_path)
+
+        self.exe_path = normalize_exe_path(exe_path)
+        validate_dedicated_server_file_access(self.exe_path)
+
         self.root_dir = self.exe_path.parent
-        self.start_script_path = _try_to_normalize_start_script_path(
+
+        self.start_script_path = normalize_start_script_path(
             root_dir=self.root_dir,
             initial=start_script_path,
         )
-        self._wine_bin_path = wine_bin_path
+        validate_dedicated_server_file_access(self.start_script_path)
 
-        self.config_path = _try_to_normalize_config_path(
+        self.config_path = normalize_config_path(
             root_dir=self.root_dir,
             initial=config_path,
         )
+        validate_dedicated_server_file_access(self.start_script_path)
+
         self.config = _try_to_load_config(self.config_path)
+        validate_dedicated_server_config(self.config)
+
+        self._wine_bin_path = wine_bin_path
 
         self.game_log_path = Path(self.config.events.logging.file_name)
         if not self.game_log_path.is_absolute():
@@ -337,6 +280,7 @@ class DedicatedServer:
     async def wait_network_listeners(
         self,
         timeout: float=3,
+        polling_period: float=0.1,
     ) -> Awaitable[None]:
 
         expected_ports = {
@@ -356,7 +300,7 @@ class DedicatedServer:
             if actual_ports == expected_ports:
                 return
 
-            delay = min(timeout, 0.1)
+            delay = min(timeout, polling_period)
             await asyncio.sleep(delay, loop=self._loop)
 
             time_delta = self._loop.time() - start_time
