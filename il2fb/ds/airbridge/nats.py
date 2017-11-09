@@ -19,6 +19,7 @@ from nats_stream.aio.client import StreamClient
 from il2fb.ds.middleware.console.client import ConsoleClient
 
 from il2fb.ds.airbridge import json
+from il2fb.ds.airbridge.radar import Radar
 
 
 LOG = logging.getLogger(__name__)
@@ -155,6 +156,18 @@ class NATS_OPCODE(IntEnum):
     CHAT_USER = 41
     CHAT_BELLIGERENT = 42
 
+    MOVING_SHIPS_POSITIONS = 50
+    STATIONARY_SHIPS_POSITIONS = 51
+    ALL_SHIPS_POSITIONS = 52
+
+    MOVING_AIRCRAFTS_POSITIONS = 53
+    MOVING_GROUND_UNITS_POSITIONS = 54
+    ALL_MOVING_ACTORS_POSITIONS = 55
+
+    HOUSES_POSITIONS = 56
+    STATIONARY_OBJECTS_POSITIONS = 57
+    ALL_STATIONARY_ACTORS_POSITIONS = 59
+
 
 class NATS_STATUS(IntEnum):
     SUCCESS = 0
@@ -168,29 +181,48 @@ class NATSSubscriber:
         nats_client: NATSClient,
         subject: str,
         console_client: ConsoleClient,
+        radar: Radar,
         trace=False,
     ):
         self._nats_client = nats_client
         self._subject = subject
         self._console_client = console_client
+        self._radar = radar
         self._trace = trace
+
         self._ssid = None
         self._operations = {
             NATS_OPCODE.SERVER_INFO: self._console_client.server_info,
+
             NATS_OPCODE.USER_LIST: self._console_client.user_list,
             NATS_OPCODE.USER_STATS: self._console_client.user_stats,
             NATS_OPCODE.USER_COUNT: self._console_client.user_count,
+
             NATS_OPCODE.MISSION_STATUS: self._console_client.mission_status,
             NATS_OPCODE.MISSION_LOAD: self._console_client.mission_load,
             NATS_OPCODE.MISSION_UNLOAD: self._console_client.mission_unload,
             NATS_OPCODE.MISSION_BEGIN: self._console_client.mission_begin,
             NATS_OPCODE.MISSION_END: self._console_client.mission_end,
+
             NATS_OPCODE.KICK_BY_CALLSIGN: self._console_client.kick_by_callsign,
             NATS_OPCODE.KICK_BY_NUMBER: self._console_client.kick_by_number,
             NATS_OPCODE.KICK_ALL: self._console_client.kick_all,
+
             NATS_OPCODE.CHAT_ALL: self._console_client.chat_all,
             NATS_OPCODE.CHAT_USER: self._console_client.chat_user,
             NATS_OPCODE.CHAT_BELLIGERENT: self._console_client.chat_belligerent,
+
+            NATS_OPCODE.MOVING_SHIPS_POSITIONS: self._radar.moving_ships_positions,
+            NATS_OPCODE.STATIONARY_SHIPS_POSITIONS: self._radar.stationary_ships_positions,
+            NATS_OPCODE.ALL_SHIPS_POSITIONS: self._radar.all_ships_positions,
+
+            NATS_OPCODE.MOVING_AIRCRAFTS_POSITIONS: self._radar.moving_aircrafts_positions,
+            NATS_OPCODE.MOVING_GROUND_UNITS_POSITIONS: self._radar.moving_ground_units_positions,
+            NATS_OPCODE.ALL_MOVING_ACTORS_POSITIONS: self._radar.all_moving_actors_positions,
+
+            NATS_OPCODE.HOUSES_POSITIONS: self._radar.houses_positions,
+            NATS_OPCODE.STATIONARY_OBJECTS_POSITIONS: self._radar.stationary_objects_positions,
+            NATS_OPCODE.ALL_STATIONARY_ACTORS_POSITIONS: self._radar.all_stationary_actors_positions,
         }
 
     async def start(self) -> Awaitable[None]:
@@ -219,7 +251,7 @@ class NATSSubscriber:
             )
             response = dict(
                 status=NATS_STATUS.FAILURE,
-                payload=str(e),
+                payload=(str(e) or e.__class__.__name__),
             )
         else:
             response = dict(

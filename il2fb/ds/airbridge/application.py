@@ -22,6 +22,8 @@ from il2fb.ds.airbridge.nats import NATSClient
 from il2fb.ds.airbridge.nats import NATSStreamingClient
 from il2fb.ds.airbridge.nats import NATSSubscriber
 
+from il2fb.ds.airbridge.radar import Radar
+
 from il2fb.ds.airbridge.streaming.facilities import ChatStreamingFacility
 from il2fb.ds.airbridge.streaming.facilities import EventsStreamingFacility
 from il2fb.ds.airbridge.streaming.facilities import NotParsedStringsStreamingFacility
@@ -58,6 +60,10 @@ class Airbridge:
 
         self.device_link_client = device_link_client
         self._device_link_client_proxy = None
+
+        self.radar = Radar(
+            device_link_client=self.device_link_client,
+        )
 
         self._game_log_string_queue = queue.Queue()
         self._game_log_event_parser = GameLogEventParser()
@@ -131,6 +137,7 @@ class Airbridge:
                 nats_client=self.nats_client,
                 subject=subscription_config.subject,
                 console_client=self.console_client,
+                radar=self.radar,
                 trace=self._trace,
             )
             await self._nats_subscriber.start()
