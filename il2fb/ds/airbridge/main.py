@@ -230,11 +230,6 @@ def run_main(config: ServerConfig, state: DotAccessDict) -> None:
         main_loop.run_until_complete(ds.wait_finished())
         abort()
 
-    LOG.info("start input handler")
-
-    stdin_handler = make_thread_safe_string_handler(main_loop, ds.input)
-    terminal.listen_stdin(handler=stdin_handler)
-
     LOG.info("prepare for application start")
 
     app_loop = asyncio.SelectorEventLoop()
@@ -278,6 +273,11 @@ def run_main(config: ServerConfig, state: DotAccessDict) -> None:
     exit_handler = functools.partial(main_loop.create_task, ds.ask_exit())
     exit_handler = wrap_exit_handler(main_thread, exit_handler)
     set_exit_handler(main_loop, exit_handler)
+
+    LOG.info("start input handler")
+
+    stdin_handler = make_thread_safe_string_handler(main_loop, ds.input)
+    terminal.listen_stdin(handler=stdin_handler)
 
     try:
         LOG.info("wait for dedicated server to exit")
