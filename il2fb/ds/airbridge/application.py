@@ -43,11 +43,13 @@ class Airbridge:
         dedicated_server: DedicatedServer,
         console_client: ConsoleClient,
         device_link_client: DeviceLinkClient,
+        trace: bool=False,
     ):
         self.loop = loop
 
         self._config = config
         self._state = state
+        self._trace = trace
 
         self.dedicated_server = dedicated_server
 
@@ -126,8 +128,10 @@ class Airbridge:
         subscription_config = config.subscription
         if subscription_config:
             self._nats_subscriber = NATSSubscriber(
-                app=self,
+                nats_client=self.nats_client,
                 subject=subscription_config.subject,
+                console_client=self.console_client,
+                trace=self._trace,
             )
             await self._nats_subscriber.start()
 

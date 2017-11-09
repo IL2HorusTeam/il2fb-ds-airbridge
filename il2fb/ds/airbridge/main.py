@@ -102,6 +102,7 @@ def run_app(
     start_ack: Callable[[], None],
     error_ack: Callable[[], None],
     stop_request: Awaitable[None],
+    trace: bool=False,
 ) -> None:
     asyncio.set_event_loop(loop)
 
@@ -109,7 +110,7 @@ def run_app(
 
     console_client = ConsoleClient(
         loop=loop,
-        trace=config.logging.trace,
+        trace=trace,
     )
     loop.create_task(loop.create_connection(
         protocol_factory=lambda: console_client,
@@ -124,7 +125,7 @@ def run_app(
     device_link_client = DeviceLinkClient(
         loop=loop,
         remote_address=device_link_address,
-        trace=config.logging.trace,
+        trace=trace,
     )
 
     loop.create_task(loop.create_datagram_endpoint(
@@ -179,7 +180,7 @@ def run_app(
         ))
 
 
-def run_main(config: ServerConfig, state: DotAccessDict) -> None:
+def run_main(config: ServerConfig, state: DotAccessDict, trace: bool) -> None:
     main_thread = threading.current_thread()
     main_thread.name = "main"
 
@@ -261,6 +262,7 @@ def run_main(config: ServerConfig, state: DotAccessDict) -> None:
             start_ack=app_start_ack,
             error_ack=app_error_ack,
             stop_request=app_stop_request,
+            trace=trace,
         ),
         daemon=True,
     )
@@ -304,7 +306,11 @@ def main() -> None:
     setup_logging(config.logging)
 
     with track_persistent_state(config.state.file_path) as state:
-        run_main(config, state)
+        run_main(
+            config=config,
+            state=state,
+            trace=config.logging.trace,
+        )
 
 
 if __name__ == '__main__':

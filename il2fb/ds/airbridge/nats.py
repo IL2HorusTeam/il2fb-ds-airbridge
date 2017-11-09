@@ -3,13 +3,22 @@
 import asyncio
 import logging
 
-from typing import Awaitable, List
+from enum import IntEnum
+from typing import Awaitable, List, Optional, Any
 
-from nats.aio.client import (
-    Client, Msg, DEFAULT_RECONNECT_TIME_WAIT, DEFAULT_PING_INTERVAL,
-    DEFAULT_MAX_OUTSTANDING_PINGS, DEFAULT_MAX_FLUSHER_QUEUE_SIZE,
-)
-from nats_stream.aio.client import StreamClient, DEFAULT_CONNECT_WAIT
+from nats.aio.client import Client
+from nats.aio.client import DEFAULT_MAX_FLUSHER_QUEUE_SIZE
+from nats.aio.client import DEFAULT_MAX_OUTSTANDING_PINGS
+from nats.aio.client import DEFAULT_RECONNECT_TIME_WAIT
+from nats.aio.client import DEFAULT_PING_INTERVAL
+from nats.aio.client import Msg
+
+from nats_stream.aio.client import DEFAULT_CONNECT_WAIT
+from nats_stream.aio.client import StreamClient
+
+from il2fb.ds.middleware.console.client import ConsoleClient
+
+from il2fb.ds.airbridge import json
 
 
 LOG = logging.getLogger(__name__)
@@ -125,25 +134,136 @@ class NATSStreamingClient(StreamClient):
         )
 
 
+class NATS_OPCODE(IntEnum):
+    SERVER_INFO = 0
+
+    USER_LIST = 10
+    USER_STATS = 11
+    USER_COUNT = 12
+
+    MISSION_STATUS = 20
+    MISSION_LOAD = 21
+    MISSION_UNLOAD = 22
+    MISSION_BEGIN = 23
+    MISSION_END = 24
+
+    KICK_BY_CALLSIGN = 30
+    KICK_BY_NUMBER = 31
+    KICK_ALL = 32
+
+    CHAT_ALL = 40
+    CHAT_USER = 41
+    CHAT_BELLIGERENT = 42
+
+
+class NATS_STATUS(IntEnum):
+    SUCCESS = 0
+    FAILURE = 1
+
+
 class NATSSubscriber:
 
-    def __init__(self, app, subject):
-        self._app = app
+    def __init__(
+        self,
+        nats_client: NATSClient,
+        subject: str,
+        console_client: ConsoleClient,
+        trace=False,
+    ):
+        self._nats_client = nats_client
         self._subject = subject
+        self._console_client = console_client
+        self._trace = trace
         self._ssid = None
+        self._operations = {
+            NATS_OPCODE.SERVER_INFO: self._console_client.server_info,
+            NATS_OPCODE.USER_LIST: self._console_client.user_list,
+            NATS_OPCODE.USER_STATS: self._console_client.user_stats,
+            NATS_OPCODE.USER_COUNT: self._console_client.user_count,
+            NATS_OPCODE.MISSION_STATUS: self._console_client.mission_status,
+            NATS_OPCODE.MISSION_LOAD: self._console_client.mission_load,
+            NATS_OPCODE.MISSION_UNLOAD: self._console_client.mission_unload,
+            NATS_OPCODE.MISSION_BEGIN: self._console_client.mission_begin,
+            NATS_OPCODE.MISSION_END: self._console_client.mission_end,
+            NATS_OPCODE.KICK_BY_CALLSIGN: self._console_client.kick_by_callsign,
+            NATS_OPCODE.KICK_BY_NUMBER: self._console_client.kick_by_number,
+            NATS_OPCODE.KICK_ALL: self._console_client.kick_all,
+            NATS_OPCODE.CHAT_ALL: self._console_client.chat_all,
+            NATS_OPCODE.CHAT_USER: self._console_client.chat_user,
+            NATS_OPCODE.CHAT_BELLIGERENT: self._console_client.chat_belligerent,
+        }
 
     async def start(self) -> Awaitable[None]:
-        self._ssid = await self._app.nats_client.subscribe(
+        self._ssid = await self._nats_client.subscribe(
             subject=self._subject,
-            cb=self._handle_message,
+            cb=self._try_handle_request,
         )
         LOG.info(f"subscribed to nats subject '{self._subject}'")
 
     async def stop(self) -> Awaitable[None]:
-        await self._app.nats_client.unsubscribe(
+        await self._nats_client.unsubscribe(
             ssid=self._ssid,
         )
         LOG.info(f"unsubscribed from nats subject '{self._subject}'")
 
-    async def _handle_message(self, msg: Msg) -> Awaitable[None]:
-        LOG.debug(f"nats msg: {msg.data}, {msg.reply}")
+    async def _try_handle_request(self, request: Msg) -> Awaitable[None]:
+        LOG.debug(
+            f"nats request (data={request.data}, subscriber='{request.reply}')"
+        )
+
+        try:
+            result = await self._handle_message(request.data)
+        except Exception as e:
+            LOG.exception(
+                f"failed to handle nats request (data={request.data})"
+            )
+            response = dict(
+                status=NATS_STATUS.FAILURE,
+                payload=str(e),
+            )
+        else:
+            response = dict(
+                status=NATS_STATUS.SUCCESS,
+                payload=result,
+            )
+
+        if request.reply:
+            try:
+                data = json.dumps(response)
+                data = data.encode()
+                await self._nats_client.publish(request.reply, data)
+            except Exception:
+                LOG.exception(
+                    f"failed to publish nats response (data={response})"
+                )
+            else:
+                LOG.debug(
+                    f"nats response (data={data})"
+                )
+
+    async def _handle_message(self, msg: bytes) -> Awaitable[Optional[Any]]:
+        msg = msg.decode()
+        msg = json.loads(msg)
+
+        opcode = msg['opcode']
+
+        if self._trace:
+            LOG.debug(f"nats opcode: {opcode}")
+
+        opcode = NATS_OPCODE(opcode)
+        operation = self._operations[opcode]
+
+        if self._trace:
+            LOG.debug(f"nats operation: {operation.__name__}")
+
+        payload = msg.get('payload', {})
+
+        if self._trace:
+            LOG.debug(f"nats payload: {payload}")
+
+        result = await operation(**payload)
+
+        if self._trace:
+            LOG.debug(f"nats result: {result}")
+
+        return result
