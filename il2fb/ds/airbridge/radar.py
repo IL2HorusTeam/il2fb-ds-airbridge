@@ -46,64 +46,64 @@ class Radar:
     def __init__(self, device_link_client: DeviceLinkClient):
         self._client = device_link_client
 
-    async def moving_aircrafts_positions(
+    async def get_moving_ships_positions(
+        self,
+    ) -> Awaitable[List[structures.ShipPosition]]:
+
+        await self._client.refresh_radar()
+        return (await self._get_moving_ships_positions())
+
+    async def _get_moving_ships_positions(
+        self,
+    ) -> Awaitable[List[structures.ShipPosition]]:
+
+        ships = await self._client.get_all_ships_positions()
+        return [ship for ship in ships if not ship.is_stationary]
+
+    async def get_stationary_ships_positions(
+        self,
+    ) -> Awaitable[List[structures.ShipPosition]]:
+
+        await self._client.refresh_radar()
+        return (await self._get_stationary_ships_positions())
+
+    async def _get_stationary_ships_positions(
+        self,
+    ) -> Awaitable[List[structures.ShipPosition]]:
+
+        ships = await self._client.get_all_ships_positions()
+        return [ship for ship in ships if ship.is_stationary]
+
+    async def get_all_ships_positions(
+        self,
+    ) -> Awaitable[List[structures.ShipPosition]]:
+
+        await self._client.refresh_radar()
+        return (await self._client.get_all_ships_positions())
+
+    async def get_all_moving_aircrafts_positions(
         self,
     ) -> Awaitable[List[structures.MovingAircraftPosition]]:
 
         await self._client.refresh_radar()
-        return (await self._client.all_moving_aircrafts_positions())
+        return (await self._client.get_all_moving_aircrafts_positions())
 
-    async def moving_ground_units_positions(
+    async def get_all_moving_ground_units_positions(
         self,
     ) -> Awaitable[List[structures.MovingGroundUnitPosition]]:
 
         await self._client.refresh_radar()
-        return (await self._client.all_moving_ground_units_positions())
+        return (await self._client.get_all_moving_ground_units_positions())
 
-    async def moving_ships_positions(
-        self,
-    ) -> Awaitable[List[structures.ShipPosition]]:
-
-        await self._client.refresh_radar()
-        return (await self._moving_ships_positions())
-
-    async def _moving_ships_positions(
-        self,
-    ) -> Awaitable[List[structures.ShipPosition]]:
-
-        ships = await self._client.all_ships_positions()
-        return [ship for ship in ships if not ship.is_stationary]
-
-    async def stationary_ships_positions(
-        self,
-    ) -> Awaitable[List[structures.ShipPosition]]:
-
-        await self._client.refresh_radar()
-        return (await self._stationary_ships_positions())
-
-    async def _stationary_ships_positions(
-        self,
-    ) -> Awaitable[List[structures.ShipPosition]]:
-
-        ships = await self._client.all_ships_positions()
-        return [ship for ship in ships if ship.is_stationary]
-
-    async def all_ships_positions(
-        self,
-    ) -> Awaitable[List[structures.ShipPosition]]:
-
-        await self._client.refresh_radar()
-        return (await self._client.all_ships_positions())
-
-    async def all_moving_actors_positions(
+    async def get_all_moving_actors_positions(
         self,
     ) -> Awaitable[AllMovingActorsPositions]:
 
         await self._client.refresh_radar()
 
-        aircrafts = await self._client.all_moving_aircrafts_positions()
-        ground_units = await self._client.all_moving_ground_units_positions()
-        ships = await self._moving_ships_positions()
+        aircrafts = await self._client.get_all_moving_aircrafts_positions()
+        ground_units = await self._client.get_all_moving_ground_units_positions()
+        ships = await self._get_moving_ships_positions()
 
         return AllMovingActorsPositions(
             aircrafts=aircrafts,
@@ -111,29 +111,29 @@ class Radar:
             ships=ships,
         )
 
-    async def stationary_objects_positions(
+    async def get_all_stationary_objects_positions(
         self,
     ) -> Awaitable[List[structures.StationaryObjectPosition]]:
 
         await self._client.refresh_radar()
-        return (await self._client.all_stationary_objects_positions())
+        return (await self._client.get_all_stationary_objects_positions())
 
-    async def houses_positions(
+    async def get_all_houses_positions(
         self,
     ) -> Awaitable[List[structures.HousePosition]]:
 
         await self._client.refresh_radar()
-        return (await self._client.all_houses_positions())
+        return (await self._client.get_all_houses_positions())
 
-    async def all_stationary_actors_positions(
+    async def get_all_stationary_actors_positions(
         self,
     ) -> Awaitable[AllStationaryActorsPositions]:
 
         await self._client.refresh_radar()
 
-        stationary_objects = await self._client.all_stationary_objects_positions()
-        houses = await self._client.all_houses_positions()
-        ships = await self._stationary_ships_positions()
+        stationary_objects = await self._client.get_all_stationary_objects_positions()
+        houses = await self._client.get_all_houses_positions()
+        ships = await self._get_stationary_ships_positions()
 
         return AllStationaryActorsPositions(
             stationary_objects=stationary_objects,

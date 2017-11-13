@@ -16,6 +16,7 @@ from nats.aio.client import Msg
 from nats_stream.aio.client import DEFAULT_CONNECT_WAIT
 from nats_stream.aio.client import StreamClient
 
+from il2fb.commons.organization import Belligerents
 from il2fb.ds.middleware.console.client import ConsoleClient
 
 from il2fb.ds.airbridge import json
@@ -136,37 +137,37 @@ class NATSStreamingClient(StreamClient):
 
 
 class NATS_OPCODE(IntEnum):
-    SERVER_INFO = 0
+    GET_SERVER_INFO = 0
 
-    USER_LIST = 10
-    USER_STATS = 11
-    USER_COUNT = 12
+    GET_HUMANS_COUNT = 10
+    GET_HUMANS_LIST = 11
+    GET_HUMANS_STATISTICS = 12
 
-    MISSION_STATUS = 20
-    MISSION_LOAD = 21
-    MISSION_UNLOAD = 22
-    MISSION_BEGIN = 23
-    MISSION_END = 24
+    KICK_HUMAN_BY_CALLSIGN = 20
+    KICK_HUMAN_BY_NUMBER = 21
+    KICK_ALL_HUMANS = 22
 
-    KICK_BY_CALLSIGN = 30
-    KICK_BY_NUMBER = 31
-    KICK_ALL = 32
+    CHAT_TO_ALL = 30
+    CHAT_TO_HUMAN = 31
+    CHAT_TO_BELLIGERENT = 32
 
-    CHAT_ALL = 40
-    CHAT_USER = 41
-    CHAT_BELLIGERENT = 42
+    GET_MISSION_INFO = 40
+    LOAD_MISSION = 41
+    BEGIN_MISSION = 42
+    END_MISSION = 43
+    UNLOAD_MISSION = 44
 
-    MOVING_SHIPS_POSITIONS = 50
-    STATIONARY_SHIPS_POSITIONS = 51
-    ALL_SHIPS_POSITIONS = 52
+    GET_MOVING_SHIPS_POSITIONS = 50
+    GET_STATIONARY_SHIPS_POSITIONS = 51
+    GET_ALL_SHIPS_POSITIONS = 52
 
-    MOVING_AIRCRAFTS_POSITIONS = 53
-    MOVING_GROUND_UNITS_POSITIONS = 54
-    ALL_MOVING_ACTORS_POSITIONS = 55
+    GET_ALL_MOVING_AIRCRAFTS_POSITIONS = 53
+    GET_ALL_MOVING_GROUND_UNITS_POSITIONS = 54
+    GET_ALL_MOVING_ACTORS_POSITIONS = 55
 
-    HOUSES_POSITIONS = 56
-    STATIONARY_OBJECTS_POSITIONS = 57
-    ALL_STATIONARY_ACTORS_POSITIONS = 58
+    GET_ALL_HOUSES_POSITIONS = 56
+    GET_ALL_STATIONARY_OBJECTS_POSITIONS = 57
+    GET_ALL_STATIONARY_ACTORS_POSITIONS = 58
 
 
 class NATS_STATUS(IntEnum):
@@ -192,37 +193,37 @@ class NATSSubscriber:
 
         self._ssid = None
         self._operations = {
-            NATS_OPCODE.SERVER_INFO: self._console_client.server_info,
+            NATS_OPCODE.GET_SERVER_INFO: self._console_client.get_server_info,
 
-            NATS_OPCODE.USER_LIST: self._console_client.user_list,
-            NATS_OPCODE.USER_STATS: self._console_client.user_stats,
-            NATS_OPCODE.USER_COUNT: self._console_client.user_count,
+            NATS_OPCODE.GET_HUMANS_COUNT: self._console_client.get_humans_count,
+            NATS_OPCODE.GET_HUMANS_LIST: self._console_client.get_humans_list,
+            NATS_OPCODE.GET_HUMANS_STATISTICS: self._console_client.get_humans_statistics,
 
-            NATS_OPCODE.MISSION_STATUS: self._console_client.mission_status,
-            NATS_OPCODE.MISSION_LOAD: self._console_client.mission_load,
-            NATS_OPCODE.MISSION_UNLOAD: self._console_client.mission_unload,
-            NATS_OPCODE.MISSION_BEGIN: self._console_client.mission_begin,
-            NATS_OPCODE.MISSION_END: self._console_client.mission_end,
+            NATS_OPCODE.KICK_HUMAN_BY_CALLSIGN: self._console_client.kick_human_by_callsign,
+            NATS_OPCODE.KICK_HUMAN_BY_NUMBER: self._console_client.kick_human_by_number,
+            NATS_OPCODE.KICK_ALL_HUMANS: self._console_client.kick_all_humans,
 
-            NATS_OPCODE.KICK_BY_CALLSIGN: self._console_client.kick_by_callsign,
-            NATS_OPCODE.KICK_BY_NUMBER: self._console_client.kick_by_number,
-            NATS_OPCODE.KICK_ALL: self._console_client.kick_all,
+            NATS_OPCODE.CHAT_TO_ALL: self._console_client.chat_to_all,
+            NATS_OPCODE.CHAT_TO_HUMAN: self._console_client.chat_to_human,
+            NATS_OPCODE.CHAT_TO_BELLIGERENT: self._chat_to_belligerent,
 
-            NATS_OPCODE.CHAT_ALL: self._console_client.chat_all,
-            NATS_OPCODE.CHAT_USER: self._console_client.chat_user,
-            NATS_OPCODE.CHAT_BELLIGERENT: self._console_client.chat_belligerent,
+            NATS_OPCODE.GET_MISSION_INFO: self._console_client.get_mission_info,
+            NATS_OPCODE.LOAD_MISSION: self._console_client.load_mission,
+            NATS_OPCODE.BEGIN_MISSION: self._console_client.begin_mission,
+            NATS_OPCODE.END_MISSION: self._console_client.end_mission,
+            NATS_OPCODE.UNLOAD_MISSION: self._console_client.unload_mission,
 
-            NATS_OPCODE.MOVING_SHIPS_POSITIONS: self._radar.moving_ships_positions,
-            NATS_OPCODE.STATIONARY_SHIPS_POSITIONS: self._radar.stationary_ships_positions,
-            NATS_OPCODE.ALL_SHIPS_POSITIONS: self._radar.all_ships_positions,
+            NATS_OPCODE.GET_MOVING_SHIPS_POSITIONS: self._radar.get_moving_ships_positions,
+            NATS_OPCODE.GET_STATIONARY_SHIPS_POSITIONS: self._radar.get_stationary_ships_positions,
+            NATS_OPCODE.GET_ALL_SHIPS_POSITIONS: self._radar.get_all_ships_positions,
 
-            NATS_OPCODE.MOVING_AIRCRAFTS_POSITIONS: self._radar.moving_aircrafts_positions,
-            NATS_OPCODE.MOVING_GROUND_UNITS_POSITIONS: self._radar.moving_ground_units_positions,
-            NATS_OPCODE.ALL_MOVING_ACTORS_POSITIONS: self._radar.all_moving_actors_positions,
+            NATS_OPCODE.GET_ALL_MOVING_AIRCRAFTS_POSITIONS: self._radar.get_all_moving_aircrafts_positions,
+            NATS_OPCODE.GET_ALL_MOVING_GROUND_UNITS_POSITIONS: self._radar.get_all_moving_ground_units_positions,
+            NATS_OPCODE.GET_ALL_MOVING_ACTORS_POSITIONS: self._radar.get_all_moving_actors_positions,
 
-            NATS_OPCODE.HOUSES_POSITIONS: self._radar.houses_positions,
-            NATS_OPCODE.STATIONARY_OBJECTS_POSITIONS: self._radar.stationary_objects_positions,
-            NATS_OPCODE.ALL_STATIONARY_ACTORS_POSITIONS: self._radar.all_stationary_actors_positions,
+            NATS_OPCODE.GET_ALL_HOUSES_POSITIONS: self._radar.get_all_houses_positions,
+            NATS_OPCODE.GET_ALL_STATIONARY_OBJECTS_POSITIONS: self._radar.get_all_stationary_objects_positions,
+            NATS_OPCODE.GET_ALL_STATIONARY_ACTORS_POSITIONS: self._radar.get_all_stationary_actors_positions,
         }
 
     async def start(self) -> Awaitable[None]:
@@ -251,7 +252,7 @@ class NATSSubscriber:
             )
             response = dict(
                 status=NATS_STATUS.FAILURE,
-                payload=(str(e) or e.__class__.__name__),
+                details=(str(e) or e.__class__.__name__),
             )
         else:
             response = dict(
@@ -299,3 +300,12 @@ class NATSSubscriber:
             LOG.debug(f"nats result: {result}")
 
         return result
+
+    async def _chat_to_belligerent(
+        self,
+        message: str,
+        addressee: int,
+    ) -> Awaitable[None]:
+
+        addressee = Belligerents.get_by_value(addressee)
+        await self._console_client.chat_to_belligerent(message, addressee)
