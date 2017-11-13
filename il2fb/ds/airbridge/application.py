@@ -18,9 +18,10 @@ from il2fb.ds.airbridge.dedicated_server.device_link import DeviceLinkProxy
 from il2fb.ds.airbridge.dedicated_server.instance import DedicatedServer
 from il2fb.ds.airbridge.dedicated_server.game_log import GameLogWorker
 
+from il2fb.ds.airbridge.api.nats import NATSSubscriber
+
 from il2fb.ds.airbridge.nats import NATSClient
 from il2fb.ds.airbridge.nats import NATSStreamingClient
-from il2fb.ds.airbridge.nats import NATSSubscriber
 
 from il2fb.ds.airbridge.radar import Radar
 
