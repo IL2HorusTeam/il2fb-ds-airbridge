@@ -115,7 +115,8 @@ class Airbridge:
 
         self.nats_client = None
         self.nats_streaming_client = None
-        self._nats_subscriber = None
+
+        self._nats_api = None
 
     async def start(self) -> Awaitable[None]:
         await self._maybe_start_nats_clients()
@@ -123,6 +124,7 @@ class Airbridge:
         self._start_streaming_facilities()
         self._start_game_log_processing()
         await self._maybe_start_proxies()
+        await self._maybe_start_api()
 
     async def _maybe_start_nats_clients(self) -> Awaitable[None]:
         config = self._config.nats
@@ -131,17 +133,6 @@ class Airbridge:
 
         self.nats_client = NATSClient(loop=self.loop)
         await self.nats_client.connect(servers=config.servers)
-
-        subscription_config = config.subscription
-        if subscription_config:
-            self._nats_subscriber = NATSSubscriber(
-                nats_client=self.nats_client,
-                subject=subscription_config.subject,
-                console_client=self.console_client,
-                radar=self.radar,
-                trace=self._trace,
-            )
-            await self._nats_subscriber.start()
 
         streaming_config = config.streaming
         if not streaming_config:
@@ -221,7 +212,7 @@ class Airbridge:
             )
             await self._console_client_proxy.start()
 
-    async def _maybe_start_device_link_client_proxy(self) -> None:
+    async def _maybe_start_device_link_client_proxy(self) -> Awaitable[None]:
         device_link_proxy_config = self._config.ds.device_link_proxy
         if device_link_proxy_config:
             self._device_link_client_proxy = DeviceLinkProxy(
@@ -230,6 +221,24 @@ class Airbridge:
                 device_link_client=self.device_link_client,
             )
             await self._device_link_client_proxy.start()
+
+    async def _maybe_start_api(self) -> Awaitable[None]:
+        await self._maybe_start_nats_api()
+
+    async def _maybe_start_nats_api(self) -> Awaitable[None]:
+        if not self.nats_client:
+            return
+
+        config = self._config.api.nats
+        if config:
+            self._nats_api = NATSSubscriber(
+                nats_client=self.nats_client,
+                subject=config.subject,
+                console_client=self.console_client,
+                radar=self.radar,
+                trace=self._trace,
+            )
+            await self._nats_api.start()
 
     def stop(self) -> None:
         self._maybe_stop_proxies()
@@ -243,11 +252,19 @@ class Airbridge:
             self._device_link_client_proxy.stop()
 
     async def wait_stopped(self) -> Awaitable[None]:
+        await self._maybe_stop_api()
         await self._maybe_wait_proxies()
         self._maybe_stop_game_log_processing()
         await self._stop_streaming_facilities()
         await self._maybe_stop_streaming_subscribers()
         await self._maybe_stop_nats_clients()
+
+    async def _maybe_stop_api(self) -> Awaitable[None]:
+        await self._maybe_stop_nats_api()
+
+    async def _maybe_stop_nats_api(self) -> Awaitable[None]:
+        if self._nats_api:
+            await self._nats_api.stop()
 
     async def _maybe_wait_proxies(self) -> Awaitable[None]:
         awaitables = []
@@ -313,9 +330,6 @@ class Airbridge:
 
         if self.nats_streaming_client:
             await self.nats_streaming_client.close()
-
-        if self._nats_subscriber:
-            await self._nats_subscriber.stop()
 
         await self.nats_client.flush()
         await self.nats_client.close()

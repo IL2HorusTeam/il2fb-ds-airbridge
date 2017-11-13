@@ -148,15 +148,6 @@ CONFIG_SCHEMA = {
                         'uniqueItems': True,
                     },
                 },
-                'subscription': {
-                    'type': 'object',
-                    'properties': {
-                        'subject': {
-                            'type': 'string',
-                        },
-                    },
-                    'required': ['subject', ],
-                },
                 'streaming': {
                     'type': 'object',
                     'properties': {
@@ -171,6 +162,20 @@ CONFIG_SCHEMA = {
                 },
             },
             'required': ['servers', ],
+        },
+        'api': {
+            'type': 'object',
+            'properties': {
+                'nats': {
+                    'type': 'object',
+                    'properties': {
+                        'subject': {
+                            'type': 'string',
+                        },
+                    },
+                    'required': ['subject', ],
+                },
+            },
         },
         'streaming': {
             'type': 'object',
