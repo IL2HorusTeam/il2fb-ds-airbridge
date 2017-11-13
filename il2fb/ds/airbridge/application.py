@@ -18,6 +18,7 @@ from il2fb.ds.airbridge.dedicated_server.device_link import DeviceLinkProxy
 from il2fb.ds.airbridge.dedicated_server.instance import DedicatedServer
 from il2fb.ds.airbridge.dedicated_server.game_log import GameLogWorker
 
+from il2fb.ds.airbridge.api.http import build_http_api
 from il2fb.ds.airbridge.api.nats import NATSSubscriber
 
 from il2fb.ds.airbridge.nats import NATSClient
@@ -117,6 +118,10 @@ class Airbridge:
         self.nats_streaming_client = None
 
         self._nats_api = None
+
+        self._http_api = None
+        self._http_api_handler = None
+        self._http_api_server = None
 
     async def start(self) -> Awaitable[None]:
         await self._maybe_start_nats_clients()
@@ -224,6 +229,7 @@ class Airbridge:
 
     async def _maybe_start_api(self) -> Awaitable[None]:
         await self._maybe_start_nats_api()
+        await self._maybe_start_http_api()
 
     async def _maybe_start_nats_api(self) -> Awaitable[None]:
         if not self.nats_client:
@@ -240,6 +246,30 @@ class Airbridge:
             )
             await self._nats_api.start()
 
+    async def _maybe_start_http_api(self) -> Awaitable[None]:
+        config = self._config.api.http
+        if config:
+            self._http_api = build_http_api(
+                loop=self.loop,
+                config=dict(
+                    cors=config.cors,
+                    console_client=self.console_client,
+                    radar=self.radar,
+                    chat=self.chat,
+                    events=self.events,
+                    not_parsed_strings=self.not_parsed_strings,
+                ),
+                debug=self._trace,
+            )
+            self._http_api_handler = self._http_api.make_handler(
+                loop=self.loop,
+            )
+            self._http_api_server = await self.loop.create_server(
+                self._http_api_handler,
+                config.bind.address or "localhost",
+                config.bind.port,
+            )
+
     def stop(self) -> None:
         self._maybe_stop_proxies()
         self._game_log_watch_dog.stop()
@@ -252,19 +282,28 @@ class Airbridge:
             self._device_link_client_proxy.stop()
 
     async def wait_stopped(self) -> Awaitable[None]:
-        await self._maybe_stop_api()
+        await self._maybe_wait_api_stopped()
         await self._maybe_wait_proxies()
         self._maybe_stop_game_log_processing()
         await self._stop_streaming_facilities()
         await self._maybe_stop_streaming_subscribers()
         await self._maybe_stop_nats_clients()
 
-    async def _maybe_stop_api(self) -> Awaitable[None]:
-        await self._maybe_stop_nats_api()
+    async def _maybe_wait_api_stopped(self) -> Awaitable[None]:
+        await self._maybe_wait_nats_api_stopped()
+        await self._maybe_wait_http_api_stopped()
 
-    async def _maybe_stop_nats_api(self) -> Awaitable[None]:
+    async def _maybe_wait_nats_api_stopped(self) -> Awaitable[None]:
         if self._nats_api:
             await self._nats_api.stop()
+
+    async def _maybe_wait_http_api_stopped(self) -> Awaitable[None]:
+        if self._http_api_server:
+            self._http_api_server.close()
+            await self._http_api_server.wait_closed()
+            await self._http_api.shutdown()
+            await self._http_api_handler.shutdown(60.0)
+            await self._http_api.cleanup()
 
     async def _maybe_wait_proxies(self) -> Awaitable[None]:
         awaitables = []

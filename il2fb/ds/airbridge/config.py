@@ -175,6 +175,29 @@ CONFIG_SCHEMA = {
                     },
                     'required': ['subject', ],
                 },
+                'http': {
+                    'type': 'object',
+                    'properties': {
+                        'bind': {
+                            'type': 'object',
+                            'properties': {
+                                'address': {
+                                    'format': 'string',
+                                },
+                                'port': {
+                                    'type': 'integer',
+                                    'minimum': 0,
+                                    'maximum': 65535,
+                                },
+                            },
+                            'required': ['port', ],
+                        },
+                        'cors': {
+                            'type': 'object',
+                        },
+                    },
+                    'required': ['bind', ],
+                },
             },
         },
         'streaming': {
