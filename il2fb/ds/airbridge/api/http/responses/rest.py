@@ -29,9 +29,9 @@ class RESTResponse(web.Response, abc.ABC):
         charset: str='utf-8',
         **kwargs
     ):
-        payload = payload or {}
+        payload = payload if payload is not None else {}
 
-        detail = detail or self.detail
+        detail = detail if detail is not None else self.detail
         if detail:
             payload['detail'] = str(detail)
 

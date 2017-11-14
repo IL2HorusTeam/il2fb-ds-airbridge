@@ -253,12 +253,12 @@ class Airbridge:
                 loop=self.loop,
                 config=dict(
                     cors=config.cors,
-                    console_client=self.console_client,
-                    radar=self.radar,
-                    chat=self.chat,
-                    events=self.events,
-                    not_parsed_strings=self.not_parsed_strings,
                 ),
+                console_client=self.console_client,
+                radar=self.radar,
+                chat=self.chat,
+                events=self.events,
+                not_parsed_strings=self.not_parsed_strings,
                 debug=self._trace,
             )
             self._http_api_handler = self._http_api.make_handler(

@@ -26,9 +26,8 @@ class NATS_OPCODE(IntEnum):
     GET_HUMANS_LIST = 11
     GET_HUMANS_STATISTICS = 12
 
-    KICK_HUMAN_BY_CALLSIGN = 20
-    KICK_HUMAN_BY_NUMBER = 21
-    KICK_ALL_HUMANS = 22
+    KICK_ALL_HUMANS = 20
+    KICK_HUMAN_BY_CALLSIGN = 21
 
     CHAT_TO_ALL = 30
     CHAT_TO_HUMAN = 31
@@ -44,12 +43,12 @@ class NATS_OPCODE(IntEnum):
     GET_STATIONARY_SHIPS_POSITIONS = 51
     GET_ALL_SHIPS_POSITIONS = 52
 
-    GET_ALL_MOVING_AIRCRAFTS_POSITIONS = 53
-    GET_ALL_MOVING_GROUND_UNITS_POSITIONS = 54
+    GET_MOVING_AIRCRAFTS_POSITIONS = 53
+    GET_MOVING_GROUND_UNITS_POSITIONS = 54
     GET_ALL_MOVING_ACTORS_POSITIONS = 55
 
     GET_ALL_HOUSES_POSITIONS = 56
-    GET_ALL_STATIONARY_OBJECTS_POSITIONS = 57
+    GET_STATIONARY_OBJECTS_POSITIONS = 57
     GET_ALL_STATIONARY_ACTORS_POSITIONS = 58
 
 
@@ -82,9 +81,8 @@ class NATSSubscriber:
             NATS_OPCODE.GET_HUMANS_LIST: self._console_client.get_humans_list,
             NATS_OPCODE.GET_HUMANS_STATISTICS: self._console_client.get_humans_statistics,
 
-            NATS_OPCODE.KICK_HUMAN_BY_CALLSIGN: self._console_client.kick_human_by_callsign,
-            NATS_OPCODE.KICK_HUMAN_BY_NUMBER: self._console_client.kick_human_by_number,
             NATS_OPCODE.KICK_ALL_HUMANS: self._console_client.kick_all_humans,
+            NATS_OPCODE.KICK_HUMAN_BY_CALLSIGN: self._console_client.kick_human_by_callsign,
 
             NATS_OPCODE.CHAT_TO_ALL: self._console_client.chat_to_all,
             NATS_OPCODE.CHAT_TO_HUMAN: self._console_client.chat_to_human,
@@ -100,12 +98,12 @@ class NATSSubscriber:
             NATS_OPCODE.GET_STATIONARY_SHIPS_POSITIONS: self._radar.get_stationary_ships_positions,
             NATS_OPCODE.GET_ALL_SHIPS_POSITIONS: self._radar.get_all_ships_positions,
 
-            NATS_OPCODE.GET_ALL_MOVING_AIRCRAFTS_POSITIONS: self._radar.get_all_moving_aircrafts_positions,
-            NATS_OPCODE.GET_ALL_MOVING_GROUND_UNITS_POSITIONS: self._radar.get_all_moving_ground_units_positions,
+            NATS_OPCODE.GET_MOVING_AIRCRAFTS_POSITIONS: self._radar.get_moving_aircrafts_positions,
+            NATS_OPCODE.GET_MOVING_GROUND_UNITS_POSITIONS: self._radar.get_moving_ground_units_positions,
             NATS_OPCODE.GET_ALL_MOVING_ACTORS_POSITIONS: self._radar.get_all_moving_actors_positions,
 
             NATS_OPCODE.GET_ALL_HOUSES_POSITIONS: self._radar.get_all_houses_positions,
-            NATS_OPCODE.GET_ALL_STATIONARY_OBJECTS_POSITIONS: self._radar.get_all_stationary_objects_positions,
+            NATS_OPCODE.GET_STATIONARY_OBJECTS_POSITIONS: self._radar.get_stationary_objects_positions,
             NATS_OPCODE.GET_ALL_STATIONARY_ACTORS_POSITIONS: self._radar.get_all_stationary_actors_positions,
         }
 

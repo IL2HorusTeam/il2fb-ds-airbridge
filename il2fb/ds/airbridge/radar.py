@@ -81,14 +81,14 @@ class Radar:
         await self._client.refresh_radar()
         return (await self._client.get_all_ships_positions())
 
-    async def get_all_moving_aircrafts_positions(
+    async def get_moving_aircrafts_positions(
         self,
     ) -> Awaitable[List[structures.MovingAircraftPosition]]:
 
         await self._client.refresh_radar()
         return (await self._client.get_all_moving_aircrafts_positions())
 
-    async def get_all_moving_ground_units_positions(
+    async def get_moving_ground_units_positions(
         self,
     ) -> Awaitable[List[structures.MovingGroundUnitPosition]]:
 
@@ -111,7 +111,7 @@ class Radar:
             ships=ships,
         )
 
-    async def get_all_stationary_objects_positions(
+    async def get_stationary_objects_positions(
         self,
     ) -> Awaitable[List[structures.StationaryObjectPosition]]:
 
