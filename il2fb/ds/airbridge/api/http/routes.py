@@ -16,6 +16,7 @@ from il2fb.ds.airbridge.api.http.views import chat_to_all
 from il2fb.ds.airbridge.api.http.views import chat_to_belligerent
 from il2fb.ds.airbridge.api.http.views import chat_to_human
 
+from il2fb.ds.airbridge.api.http.views import browse_missions
 from il2fb.ds.airbridge.api.http.views import load_mission
 from il2fb.ds.airbridge.api.http.views import get_current_mission_info
 from il2fb.ds.airbridge.api.http.views import begin_current_mission
@@ -63,6 +64,9 @@ def setup_routes(app: web.Application) -> None:
     )
     app.router.add_post(
         '/chat/belligerents/{belligerent}', chat_to_belligerent,
+    )
+    app.router.add_get(
+        '/missions/browse', browse_missions,
     )
     app.router.add_post(
         '/missions/load', load_mission,

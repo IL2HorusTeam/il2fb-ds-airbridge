@@ -163,6 +163,7 @@ class DedicatedServer:
         validate_dedicated_server_file_access(self.exe_path)
 
         self.root_dir = self.exe_path.parent
+        self.missions_dir = self.root_dir / "Missions"
 
         self.start_script_path = normalize_start_script_path(
             root_dir=self.root_dir,

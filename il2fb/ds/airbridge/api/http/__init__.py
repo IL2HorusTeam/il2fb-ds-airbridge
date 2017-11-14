@@ -7,6 +7,8 @@ from typing import Optional
 from aiohttp import web
 
 from il2fb.ds.middleware.console.client import ConsoleClient
+
+from il2fb.ds.airbridge.dedicated_server.instance import DedicatedServer
 from il2fb.ds.airbridge.radar import Radar
 
 from il2fb.ds.airbridge.streaming.facilities import ChatStreamingFacility
@@ -20,6 +22,7 @@ from il2fb.ds.airbridge.api.http.security import setup_cors
 
 def build_http_api(
     loop: asyncio.AbstractEventLoop,
+    dedicated_server: DedicatedServer,
     console_client: ConsoleClient,
     radar: Radar,
     chat: ChatStreamingFacility,
@@ -28,8 +31,6 @@ def build_http_api(
     config: Optional[dict]=None,
     **kwargs
 ):
-    if config is None:
-        config = {}
 
     app = web.Application(
         loop=loop,
@@ -38,12 +39,14 @@ def build_http_api(
         ),
         **kwargs,
     )
-    app['config'] = config
+
+    app['dedicated_server'] = dedicated_server
     app['console_client'] = console_client
     app['radar'] = radar
     app['chat'] = chat
     app['events'] = events
     app['not_parsed_strings'] = not_parsed_strings
+    app['config'] = config if config is not None else {}
 
     setup_routes(app)
     setup_cors(app)

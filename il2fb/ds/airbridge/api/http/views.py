@@ -2,6 +2,8 @@
 
 import logging
 
+from stat import S_ISREG, S_ISDIR
+
 from il2fb.commons.organization import Belligerents
 
 from il2fb.ds.airbridge import json
@@ -206,6 +208,52 @@ async def chat_to_belligerent(request):
         )
     else:
         return RESTSuccess(pretty=pretty)
+
+
+async def browse_missions(request):
+    pretty = 'pretty' in request.query
+    subdir = request.query.get('dir', '')
+    root_dir = request.app['dedicated_server'].missions_dir
+
+    try:
+        absolute_root = (root_dir / subdir).resolve()
+    except Exception:
+        LOG.exception(
+            "HTTP failed to chat to list missions: incorrect input data"
+        )
+        return RESTBadRequest(
+            detail="incorrect input data",
+            pretty=pretty,
+        )
+
+    try:
+        dirs = []
+        files = []
+
+        result = {
+            'dirs': dirs,
+            'files': files
+        }
+
+        for node in absolute_root.iterdir():
+            st_mode = node.stat().st_mode
+
+            if S_ISDIR(st_mode):
+                dirs.append(node.name)
+            elif S_ISREG(st_mode) and node.suffix.lower() == '.mis':
+                files.append(node.name)
+
+        dirs.sort()
+        files.sort()
+
+    except Exception:
+        LOG.exception("HTTP failed to list missions")
+        return RESTInternalServerError(
+            detail="failed to list missions",
+            pretty=pretty,
+        )
+    else:
+        return RESTSuccess(payload=result, pretty=pretty)
 
 
 async def load_mission(request):

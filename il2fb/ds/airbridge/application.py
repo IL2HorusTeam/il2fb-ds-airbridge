@@ -251,14 +251,15 @@ class Airbridge:
         if config:
             self._http_api = build_http_api(
                 loop=self.loop,
-                config=dict(
-                    cors=config.cors,
-                ),
+                dedicated_server=self.dedicated_server,
                 console_client=self.console_client,
                 radar=self.radar,
                 chat=self.chat,
                 events=self.events,
                 not_parsed_strings=self.not_parsed_strings,
+                config=dict(
+                    cors=config.cors,
+                ),
                 debug=self._trace,
             )
             self._http_api_handler = self._http_api.make_handler(
