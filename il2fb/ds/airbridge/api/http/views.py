@@ -216,11 +216,9 @@ async def browse_missions(request):
     root_dir = request.app['dedicated_server'].missions_dir
 
     try:
-        absolute_root = (root_dir / subdir).resolve()
+        absolute_dir = (root_dir / subdir).resolve()
     except Exception:
-        LOG.exception(
-            "HTTP failed to chat to list missions: incorrect input data"
-        )
+        LOG.exception("HTTP failed to browse missions: incorrect input data")
         return RESTBadRequest(
             detail="incorrect input data",
             pretty=pretty,
@@ -235,25 +233,81 @@ async def browse_missions(request):
             'files': files
         }
 
-        for node in absolute_root.iterdir():
+        for node in absolute_dir.iterdir():
             st_mode = node.stat().st_mode
 
             if S_ISDIR(st_mode):
                 dirs.append(node.name)
-            elif S_ISREG(st_mode) and node.suffix.lower() == '.mis':
+            elif (
+                S_ISREG(st_mode) and
+                node.suffix.lower() in {'.mis', '.properties'}
+            ):
                 files.append(node.name)
 
         dirs.sort()
         files.sort()
 
     except Exception:
-        LOG.exception("HTTP failed to list missions")
+        LOG.exception("HTTP failed to browse missions")
         return RESTInternalServerError(
-            detail="failed to list missions",
+            detail="failed to browse missions",
             pretty=pretty,
         )
     else:
         return RESTSuccess(payload=result, pretty=pretty)
+
+
+async def upload_mission(request):
+    pretty = 'pretty' in request.query
+    root_dir = request.app['dedicated_server'].missions_dir
+
+    try:
+        reader = await request.multipart()
+
+        part = await reader.next()
+        subdir = await part.text()
+
+        absolute_dir = root_dir / subdir
+
+        if not absolute_dir.exists():
+            absolute_dir.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        LOG.exception("HTTP failed to upload mission: incorrect input data")
+        return RESTBadRequest(
+            detail="incorrect input data",
+            pretty=pretty,
+        )
+
+    try:
+        while True:
+            part = await reader.next()
+            if not part:
+                break
+
+            absolute_file = absolute_dir / part.filename
+
+            if absolute_file.suffix.lower() not in {'.mis', '.properties'}:
+                return RESTBadRequest(
+                    detail="incorrect input data",
+                    pretty=pretty,
+                )
+
+            # may rewrite existing file
+            with open(absolute_file, 'wb') as f:
+                while True:
+                    chunk = await part.read_chunk()
+                    if chunk:
+                        f.write(chunk)
+                    else:
+                        break
+    except Exception:
+        LOG.exception("HTTP failed to upload mission")
+        return RESTInternalServerError(
+            detail="failed to upload mission",
+            pretty=pretty,
+        )
+    else:
+        return RESTSuccess(pretty=pretty)
 
 
 async def load_mission(request):
