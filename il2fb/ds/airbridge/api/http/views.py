@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import logging
+import re
 
 from stat import S_ISREG, S_ISDIR
 
@@ -9,6 +10,7 @@ from il2fb.commons.organization import Belligerents
 from il2fb.ds.airbridge import json
 from il2fb.ds.airbridge.api.http.responses.rest import RESTBadRequest
 from il2fb.ds.airbridge.api.http.responses.rest import RESTInternalServerError
+from il2fb.ds.airbridge.api.http.responses.rest import RESTNotFound
 from il2fb.ds.airbridge.api.http.responses.rest import RESTSuccess
 
 
@@ -304,6 +306,44 @@ async def upload_mission(request):
         LOG.exception("HTTP failed to upload mission")
         return RESTInternalServerError(
             detail="failed to upload mission",
+            pretty=pretty,
+        )
+    else:
+        return RESTSuccess(pretty=pretty)
+
+
+async def delete_mission(request):
+    pretty = 'pretty' in request.query
+    root_dir = request.app['dedicated_server'].missions_dir
+
+    try:
+        relative_path = request.match_info['file_path']
+        absolute_path = (root_dir / relative_path)
+    except Exception:
+        LOG.exception(
+            "HTTP failed to delete mission: incorrect input data"
+        )
+        return RESTBadRequest(
+            detail="incorrect input data",
+            pretty=pretty,
+        )
+
+    if not absolute_path.exists():
+        return RESTNotFound()
+
+    try:
+        absolute_path.unlink()
+
+        properties_pattern = f"^{absolute_path.stem}(_\w{{2}})?.properties$"
+
+        for node in absolute_path.parent.iterdir():
+            if node.is_file() and re.match(properties_pattern, node.name):
+                node.unlink()
+
+    except Exception:
+        LOG.exception("HTTP failed to delete mission")
+        return RESTInternalServerError(
+            detail="failed to delete mission",
             pretty=pretty,
         )
     else:

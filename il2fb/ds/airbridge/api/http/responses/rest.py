@@ -54,17 +54,17 @@ class RESTSuccess(RESTResponse):
 
 class RESTBadRequest(RESTResponse):
     status = 400
-    detail = "Bad request."
+    detail = "Bad request"
 
 
 class RESTNotFound(RESTBadRequest):
     status = 404
-    detail = "Resource not found."
+    detail = "Resource not found"
 
 
 class RESTInternalServerError(RESTResponse):
     status = 500
     detail = (
         "The server encountered an unexpected condition that prevented it "
-        "from fulfilling the request."
+        "from fulfilling the request"
     )
