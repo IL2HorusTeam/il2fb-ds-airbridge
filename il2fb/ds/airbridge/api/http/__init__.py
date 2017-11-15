@@ -51,7 +51,7 @@ def build_http_api(
     app['mission_parser'] = mission_parser
     app['config'] = config if config is not None else {}
 
-    setup_routes(app)
+    setup_routes(app.router)
     setup_cors(app)
 
     return app

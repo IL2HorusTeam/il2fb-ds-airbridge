@@ -1,105 +1,115 @@
 # coding: utf-8
 
-from aiohttp import web
+from aiohttp.abc import AbstractRouter
 
-from il2fb.ds.airbridge.api.http import views
+from il2fb.ds.airbridge.api.http.views import chat
+from il2fb.ds.airbridge.api.http.views import humans
+from il2fb.ds.airbridge.api.http.views import misc
+from il2fb.ds.airbridge.api.http.views import missions
+from il2fb.ds.airbridge.api.http.views import radar
 
 
-def setup_routes(app: web.Application) -> None:
-    app.router.add_get(
-        '/health', views.get_health,
-    )
-    app.router.add_get(
-        '/info', views.get_server_info,
-    )
+def setup_routes(router: AbstractRouter) -> None:
+    router.add_get('/health', misc.get_health)
+    router.add_get('/info', misc.get_server_info)
 
-    app.router.add_get(
-        '/humans', views.get_humans_list,
-    )
-    app.router.add_get(
-        '/humans/count', views.get_humans_count,
-    )
-    app.router.add_get(
-        '/humans/statistics', views.get_humans_statistics,
-    )
-    app.router.add_post(
-        '/humans/kick', views.kick_all_humans,
-    )
-    app.router.add_post(
-        '/humans/{callsign}/kick', views.kick_human_by_callsign,
-    )
+    _setup_humans_routes(router)
+    _setup_chat_routes(router)
+    _setup_missions_routes(router)
+    _setup_radar_routes(router)
 
-    app.router.add_post(
-        '/chat', views.chat_to_all,
+
+def _setup_humans_routes(router: AbstractRouter) -> None:
+    router.add_post(
+        '/humans/{callsign}/kick', humans.kick_human_by_callsign,
     )
-    app.router.add_post(
-        '/chat/humans/{callsign}', views.chat_to_human,
+    router.add_post(
+        '/humans/kick', humans.kick_all_humans,
     )
-    app.router.add_post(
-        '/chat/belligerents/{belligerent}', views.chat_to_belligerent,
+    router.add_get(
+        '/humans/statistics', humans.get_humans_statistics,
+    )
+    router.add_get(
+        '/humans/count', humans.get_humans_count,
+    )
+    router.add_get(
+        '/humans', humans.get_humans_list,
     )
 
-    app.router.add_get(
-        '/missions/current/info', views.get_current_mission_info,
+
+def _setup_chat_routes(router: AbstractRouter) -> None:
+    router.add_post(
+        '/chat/humans/{callsign}', chat.chat_to_human,
     )
-    app.router.add_post(
-        '/missions/current/begin', views.begin_current_mission,
+    router.add_post(
+        '/chat/belligerents/{belligerent}', chat.chat_to_belligerent,
     )
-    app.router.add_post(
-        '/missions/current/end', views.end_current_mission,
-    )
-    app.router.add_post(
-        '/missions/current/unload', views.unload_current_mission,
+    router.add_post(
+        '/chat', chat.chat_to_all,
     )
 
-    app.router.add_post(
-        '/missions/{file_path:[^{}]+\.mis}/load', views.load_mission,
+
+def _setup_missions_routes(router: AbstractRouter) -> None:
+    router.add_get(
+        '/missions/current/info', missions.get_current_mission_info,
     )
-    app.router.add_delete(
-        '/missions/{file_path:[^{}]+\.mis}', views.delete_mission,
+    router.add_post(
+        '/missions/current/begin', missions.begin_current_mission,
     )
-    app.router.add_get(
-        '/missions/{file_path:[^{}]+\.mis}', views.get_mission,
+    router.add_post(
+        '/missions/current/end', missions.end_current_mission,
+    )
+    router.add_post(
+        '/missions/current/unload', missions.unload_current_mission,
+    )
+    router.add_post(
+        '/missions/{file_path:[^{}]+\.mis}/load', missions.load_mission,
+    )
+    router.add_delete(
+        '/missions/{file_path:[^{}]+\.mis}', missions.delete_mission,
+    )
+    router.add_get(
+        '/missions/{file_path:[^{}]+\.mis}', missions.get_mission,
+    )
+    router.add_post(
+        '/missions/{dir_path:[^{}]*}', missions.upload_mission,
+    )
+    router.add_get(
+        '/missions/{dir_path:[^{}]*}', missions.browse_missions,
+    )
+    router.add_post(
+        '/missions', missions.upload_mission,
+    )
+    router.add_get(
+        '/missions', missions.browse_missions,
     )
 
-    app.router.add_post(
-        '/missions/{dir_path:[^{}]*}', views.upload_mission,
-    )
-    app.router.add_get(
-        '/missions/{dir_path:[^{}]*}', views.browse_missions,
-    )
 
-    app.router.add_post(
-        '/missions', views.upload_mission,
+def _setup_radar_routes(router: AbstractRouter) -> None:
+    router.add_get(
+        '/radar/ships', radar.get_all_ships_positions,
     )
-    app.router.add_get(
-        '/missions', views.browse_missions,
+    router.add_get(
+        '/radar/ships/moving', radar.get_moving_ships_positions,
     )
-
-    app.router.add_get(
-        '/radar/ships', views.get_all_ships_positions,
+    router.add_get(
+        '/radar/ships/stationary', radar.get_stationary_ships_positions,
     )
-    app.router.add_get(
-        '/radar/ships/moving', views.get_moving_ships_positions,
+    router.add_get(
+        '/radar/aircrafts/moving', radar.get_moving_aircrafts_positions,
     )
-    app.router.add_get(
-        '/radar/ships/stationary', views.get_stationary_ships_positions,
+    router.add_get(
+        '/radar/ground-units/moving', radar.get_moving_ground_units_positions,
     )
-    app.router.add_get(
-        '/radar/aircrafts/moving', views.get_moving_aircrafts_positions,
+    router.add_get(
+        '/radar/houses', radar.get_all_houses_positions,
     )
-    app.router.add_get(
-        '/radar/ground-units/moving', views.get_moving_ground_units_positions,
+    router.add_get(
+        '/radar/stationary-objects', radar.get_stationary_objects_positions,
     )
-    app.router.add_get(
-        '/radar/houses', views.get_all_houses_positions,
+    router.add_get(
+        '/radar/moving', radar.get_all_moving_actors_positions,
     )
-    app.router.add_get(
-        '/radar/stationary-objects', views.get_stationary_objects_positions,
-    )
-    app.router.add_get(
-        '/radar/moving', views.get_all_moving_actors_positions,
-    )
-    app.router.add_get(
-        '/radar/stationary', views.get_all_stationary_actors_positions,
+    router.add_get(
+        '/radar/stationary', radar.get_all_stationary_actors_positions,
     )
