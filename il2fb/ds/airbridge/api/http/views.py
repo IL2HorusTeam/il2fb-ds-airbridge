@@ -214,11 +214,11 @@ async def chat_to_belligerent(request):
 
 async def browse_missions(request):
     pretty = 'pretty' in request.query
-    subdir = request.query.get('dir', '')
     root_dir = request.app['dedicated_server'].missions_dir
 
     try:
-        absolute_dir = (root_dir / subdir).resolve()
+        relative_dir = request.match_info.get('dir_path', '')
+        absolute_dir = (root_dir / relative_dir).resolve()
     except Exception:
         LOG.exception("HTTP failed to browse missions: incorrect input data")
         return RESTBadRequest(
@@ -264,7 +264,7 @@ async def upload_mission(request):
     root_dir = request.app['dedicated_server'].missions_dir
 
     try:
-        relative_dir = request.match_info['dir_path']
+        relative_dir = request.match_info.get('dir_path', '')
         absolute_dir = (root_dir / relative_dir)
     except Exception:
         LOG.exception(
