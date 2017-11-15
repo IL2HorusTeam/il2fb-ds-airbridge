@@ -352,19 +352,25 @@ async def delete_mission(request):
 
 async def load_mission(request):
     pretty = 'pretty' in request.query
+    root_dir = request.app['dedicated_server'].missions_dir
 
     try:
-        body = await request.json(loads=json.loads)
-        file_path = body['file_path']
+        relative_path = request.match_info['file_path']
+        absolute_path = (root_dir / relative_path)
     except Exception:
-        LOG.exception("HTTP failed to load mission: incorrect input data")
+        LOG.exception(
+            "HTTP failed to load mission: incorrect input data"
+        )
         return RESTBadRequest(
             detail="incorrect input data",
             pretty=pretty,
         )
 
+    if not absolute_path.exists():
+        return RESTNotFound()
+
     try:
-        await request.app['console_client'].load_mission(file_path)
+        await request.app['console_client'].load_mission(str(relative_path))
     except Exception:
         LOG.exception("HTTP failed to load mission")
         return RESTInternalServerError(
