@@ -12,9 +12,20 @@ LOG = logging.getLogger(__name__)
 
 async def get_humans_list(request):
     pretty = 'pretty' in request.query
+    timeout = request.query.get('timeout')
 
     try:
-        items = await request.app['console_client'].get_humans_list()
+        if timeout is not None:
+            timeout = float(timeout)
+    except Exception:
+        LOG.exception("HTTP failed to get humans list: incorrect input data")
+        return RESTBadRequest(
+            detail="incorrect input data",
+            pretty=pretty,
+        )
+
+    try:
+        items = await request.app['console_client'].get_humans_list(timeout)
     except Exception:
         LOG.exception("HTTP failed to get humans list")
         return RESTInternalServerError(
@@ -27,9 +38,20 @@ async def get_humans_list(request):
 
 async def get_humans_count(request):
     pretty = 'pretty' in request.query
+    timeout = request.query.get('timeout')
 
     try:
-        result = await request.app['console_client'].get_humans_count()
+        if timeout is not None:
+            timeout = float(timeout)
+    except Exception:
+        LOG.exception("HTTP failed to get humans count: incorrect input data")
+        return RESTBadRequest(
+            detail="incorrect input data",
+            pretty=pretty,
+        )
+
+    try:
+        result = await request.app['console_client'].get_humans_count(timeout)
     except Exception:
         LOG.exception("HTTP failed to get humans count")
         return RESTInternalServerError(
@@ -42,9 +64,24 @@ async def get_humans_count(request):
 
 async def get_humans_statistics(request):
     pretty = 'pretty' in request.query
+    timeout = request.query.get('timeout')
 
     try:
-        items = await request.app['console_client'].get_humans_statistics()
+        if timeout is not None:
+            timeout = float(timeout)
+    except Exception:
+        LOG.exception(
+            "HTTP failed to get humans statistics: incorrect input data"
+        )
+        return RESTBadRequest(
+            detail="incorrect input data",
+            pretty=pretty,
+        )
+
+    try:
+        items = await request.app['console_client'].get_humans_statistics(
+            timeout=timeout,
+        )
     except Exception:
         LOG.exception("HTTP failed to get humans statistics")
         return RESTInternalServerError(
@@ -57,9 +94,20 @@ async def get_humans_statistics(request):
 
 async def kick_all_humans(request):
     pretty = 'pretty' in request.query
+    timeout = request.query.get('timeout')
 
     try:
-        await request.app['console_client'].kick_all_humans()
+        if timeout is not None:
+            timeout = float(timeout)
+    except Exception:
+        LOG.exception("HTTP failed to kick all humans: incorrect input data")
+        return RESTBadRequest(
+            detail="incorrect input data",
+            pretty=pretty,
+        )
+
+    try:
+        await request.app['console_client'].kick_all_humans(timeout)
     except Exception:
         LOG.exception("HTTP failed to kick all humans")
         return RESTInternalServerError(
@@ -72,8 +120,12 @@ async def kick_all_humans(request):
 
 async def kick_human_by_callsign(request):
     pretty = 'pretty' in request.query
+    timeout = request.query.get('timeout')
 
     try:
+        if timeout is not None:
+            timeout = float(timeout)
+
         callsign = request.match_info['callsign']
     except Exception:
         LOG.exception(
@@ -85,7 +137,10 @@ async def kick_human_by_callsign(request):
         )
 
     try:
-        await request.app['console_client'].kick_human_by_callsign(callsign)
+        await request.app['console_client'].kick_human_by_callsign(
+            callsign=callsign,
+            timeout=timeout,
+        )
     except Exception:
         LOG.exception("HTTP failed to kick human by callsign")
         return RESTInternalServerError(

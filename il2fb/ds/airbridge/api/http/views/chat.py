@@ -16,8 +16,12 @@ LOG = logging.getLogger(__name__)
 
 async def chat_to_all(request):
     pretty = 'pretty' in request.query
+    timeout = request.query.get('timeout')
 
     try:
+        if timeout is not None:
+            timeout = float(timeout)
+
         body = await request.json(loads=json.loads)
         message = body['message']
     except Exception:
@@ -28,7 +32,10 @@ async def chat_to_all(request):
         )
 
     try:
-        await request.app['console_client'].chat_to_all(message)
+        await request.app['console_client'].chat_to_all(
+            message=message,
+            timeout=timeout,
+        )
     except Exception:
         LOG.exception("HTTP failed to chat to all")
         return RESTInternalServerError(
@@ -41,8 +48,12 @@ async def chat_to_all(request):
 
 async def chat_to_human(request):
     pretty = 'pretty' in request.query
+    timeout = request.query.get('timeout')
 
     try:
+        if timeout is not None:
+            timeout = float(timeout)
+
         callsign = request.match_info['callsign']
         body = await request.json(loads=json.loads)
         message = body['message']
@@ -57,6 +68,7 @@ async def chat_to_human(request):
         await request.app['console_client'].chat_to_human(
             message=message,
             addressee=callsign,
+            timeout=timeout,
         )
     except Exception:
         LOG.exception("HTTP failed to chat to human")
@@ -70,8 +82,12 @@ async def chat_to_human(request):
 
 async def chat_to_belligerent(request):
     pretty = 'pretty' in request.query
+    timeout = request.query.get('timeout')
 
     try:
+        if timeout is not None:
+            timeout = float(timeout)
+
         belligerent = request.match_info['belligerent']
         belligerent = int(belligerent)
         belligerent = Belligerents.get_by_value(belligerent)
@@ -90,6 +106,7 @@ async def chat_to_belligerent(request):
         await request.app['console_client'].chat_to_belligerent(
             message=message,
             addressee=belligerent,
+            timeout=timeout,
         )
     except Exception:
         LOG.exception("HTTP failed to chat to belligerent")

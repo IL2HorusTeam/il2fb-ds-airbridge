@@ -2,6 +2,7 @@
 
 import logging
 
+from il2fb.ds.airbridge.api.http.responses.rest import RESTBadRequest
 from il2fb.ds.airbridge.api.http.responses.rest import RESTInternalServerError
 from il2fb.ds.airbridge.api.http.responses.rest import RESTSuccess
 
@@ -11,9 +12,22 @@ LOG = logging.getLogger(__name__)
 
 async def get_all_ships_positions(request):
     pretty = 'pretty' in request.query
+    timeout = request.query.get('timeout')
 
     try:
-        result = await request.app['radar'].get_all_ships_positions()
+        if timeout is not None:
+            timeout = float(timeout)
+    except Exception:
+        LOG.exception(
+            "HTTP failed to get all ships positions: incorrect input data"
+        )
+        return RESTBadRequest(
+            detail="incorrect input data",
+            pretty=pretty,
+        )
+
+    try:
+        result = await request.app['radar'].get_all_ships_positions(timeout)
     except Exception:
         LOG.exception("HTTP failed to get all ships positions")
         return RESTInternalServerError(
@@ -26,9 +40,22 @@ async def get_all_ships_positions(request):
 
 async def get_moving_ships_positions(request):
     pretty = 'pretty' in request.query
+    timeout = request.query.get('timeout')
 
     try:
-        result = await request.app['radar'].get_moving_ships_positions()
+        if timeout is not None:
+            timeout = float(timeout)
+    except Exception:
+        LOG.exception(
+            "HTTP failed to get moving ships positions: incorrect input data"
+        )
+        return RESTBadRequest(
+            detail="incorrect input data",
+            pretty=pretty,
+        )
+
+    try:
+        result = await request.app['radar'].get_moving_ships_positions(timeout)
     except Exception:
         LOG.exception("HTTP failed to get moving ships positions")
         return RESTInternalServerError(
@@ -41,9 +68,25 @@ async def get_moving_ships_positions(request):
 
 async def get_stationary_ships_positions(request):
     pretty = 'pretty' in request.query
+    timeout = request.query.get('timeout')
 
     try:
-        result = await request.app['radar'].get_stationary_ships_positions()
+        if timeout is not None:
+            timeout = float(timeout)
+    except Exception:
+        LOG.exception(
+            "HTTP failed to get stationary ships positions: "
+            "incorrect input data"
+        )
+        return RESTBadRequest(
+            detail="incorrect input data",
+            pretty=pretty,
+        )
+
+    try:
+        result = await request.app['radar'].get_stationary_ships_positions(
+            timeout=timeout,
+        )
     except Exception:
         LOG.exception("HTTP failed to get stationary ships positions")
         return RESTInternalServerError(
@@ -56,9 +99,25 @@ async def get_stationary_ships_positions(request):
 
 async def get_moving_aircrafts_positions(request):
     pretty = 'pretty' in request.query
+    timeout = request.query.get('timeout')
 
     try:
-        result = await request.app['radar'].get_moving_aircrafts_positions()
+        if timeout is not None:
+            timeout = float(timeout)
+    except Exception:
+        LOG.exception(
+            "HTTP failed to get moving aircrafts positions: "
+            "incorrect input data"
+        )
+        return RESTBadRequest(
+            detail="incorrect input data",
+            pretty=pretty,
+        )
+
+    try:
+        result = await request.app['radar'].get_moving_aircrafts_positions(
+            timeout=timeout,
+        )
     except Exception:
         LOG.exception("HTTP failed to get moving aircrafts positions")
         return RESTInternalServerError(
@@ -71,9 +130,25 @@ async def get_moving_aircrafts_positions(request):
 
 async def get_moving_ground_units_positions(request):
     pretty = 'pretty' in request.query
+    timeout = request.query.get('timeout')
 
     try:
-        result = await request.app['radar'].get_moving_ground_units_positions()
+        if timeout is not None:
+            timeout = float(timeout)
+    except Exception:
+        LOG.exception(
+            "HTTP failed to get moving ground units positions: "
+            "incorrect input data"
+        )
+        return RESTBadRequest(
+            detail="incorrect input data",
+            pretty=pretty,
+        )
+
+    try:
+        result = await request.app['radar'].get_moving_ground_units_positions(
+            timeout=timeout,
+        )
     except Exception:
         LOG.exception("HTTP failed to get moving ground units positions")
         return RESTInternalServerError(
@@ -86,9 +161,22 @@ async def get_moving_ground_units_positions(request):
 
 async def get_all_houses_positions(request):
     pretty = 'pretty' in request.query
+    timeout = request.query.get('timeout')
 
     try:
-        result = await request.app['radar'].get_all_houses_positions()
+        if timeout is not None:
+            timeout = float(timeout)
+    except Exception:
+        LOG.exception(
+            "HTTP failed to get all houses positions: incorrect input data"
+        )
+        return RESTBadRequest(
+            detail="incorrect input data",
+            pretty=pretty,
+        )
+
+    try:
+        result = await request.app['radar'].get_all_houses_positions(timeout)
     except Exception:
         LOG.exception("HTTP failed to get all houses positions")
         return RESTInternalServerError(
@@ -101,9 +189,25 @@ async def get_all_houses_positions(request):
 
 async def get_stationary_objects_positions(request):
     pretty = 'pretty' in request.query
+    timeout = request.query.get('timeout')
 
     try:
-        result = await request.app['radar'].get_stationary_objects_positions()
+        if timeout is not None:
+            timeout = float(timeout)
+    except Exception:
+        LOG.exception(
+            "HTTP failed to get stationary objects positions: "
+            "incorrect input data"
+        )
+        return RESTBadRequest(
+            detail="incorrect input data",
+            pretty=pretty,
+        )
+
+    try:
+        result = await request.app['radar'].get_stationary_objects_positions(
+            timeout=timeout,
+        )
     except Exception:
         LOG.exception("HTTP failed to get stationary objects positions")
         return RESTInternalServerError(
@@ -116,9 +220,25 @@ async def get_stationary_objects_positions(request):
 
 async def get_all_moving_actors_positions(request):
     pretty = 'pretty' in request.query
+    timeout = request.query.get('timeout')
 
     try:
-        result = await request.app['radar'].get_all_moving_actors_positions()
+        if timeout is not None:
+            timeout = float(timeout)
+    except Exception:
+        LOG.exception(
+            "HTTP failed to get all moving actors positions: "
+            "incorrect input data"
+        )
+        return RESTBadRequest(
+            detail="incorrect input data",
+            pretty=pretty,
+        )
+
+    try:
+        result = await request.app['radar'].get_all_moving_actors_positions(
+            timeout=timeout,
+        )
     except Exception:
         LOG.exception("HTTP failed to get all moving actors positions")
         return RESTInternalServerError(
@@ -131,9 +251,25 @@ async def get_all_moving_actors_positions(request):
 
 async def get_all_stationary_actors_positions(request):
     pretty = 'pretty' in request.query
+    timeout = request.query.get('timeout')
 
     try:
-        result = await request.app['radar'].get_all_stationary_actors_positions()
+        if timeout is not None:
+            timeout = float(timeout)
+    except Exception:
+        LOG.exception(
+            "HTTP failed to get all stationary actors positions: "
+            "incorrect input data"
+        )
+        return RESTBadRequest(
+            detail="incorrect input data",
+            pretty=pretty,
+        )
+
+    try:
+        result = await request.app['radar'].get_all_stationary_actors_positions(
+            timeout=timeout,
+        )
     except Exception:
         LOG.exception("HTTP failed to get all stationary actors positions")
         return RESTInternalServerError(

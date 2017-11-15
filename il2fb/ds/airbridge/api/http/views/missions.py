@@ -195,9 +195,14 @@ async def delete_mission(request):
 
 async def load_mission(request):
     pretty = 'pretty' in request.query
+    timeout = request.query.get('timeout')
+
     root_dir = request.app['dedicated_server'].missions_dir
 
     try:
+        if timeout is not None:
+            timeout = float(timeout)
+
         relative_path = request.match_info['file_path']
         absolute_path = (root_dir / relative_path)
     except Exception:
@@ -211,7 +216,10 @@ async def load_mission(request):
         return RESTNotFound()
 
     try:
-        await request.app['console_client'].load_mission(str(relative_path))
+        await request.app['console_client'].load_mission(
+            file_path=str(relative_path),
+            timeout=timeout,
+        )
     except Exception:
         LOG.exception("HTTP failed to load mission")
         return RESTInternalServerError(
@@ -224,9 +232,22 @@ async def load_mission(request):
 
 async def get_current_mission_info(request):
     pretty = 'pretty' in request.query
+    timeout = request.query.get('timeout')
 
     try:
-        result = await request.app['console_client'].get_mission_info()
+        if timeout is not None:
+            timeout = float(timeout)
+    except Exception:
+        LOG.exception(
+            "HTTP failed to get current mission info: incorrect input data"
+        )
+        return RESTBadRequest(
+            detail="incorrect input data",
+            pretty=pretty,
+        )
+
+    try:
+        result = await request.app['console_client'].get_mission_info(timeout)
     except Exception:
         LOG.exception("HTTP failed to get current mission info")
         return RESTInternalServerError(
@@ -239,9 +260,22 @@ async def get_current_mission_info(request):
 
 async def begin_current_mission(request):
     pretty = 'pretty' in request.query
+    timeout = request.query.get('timeout')
 
     try:
-        await request.app['console_client'].begin_mission()
+        if timeout is not None:
+            timeout = float(timeout)
+    except Exception:
+        LOG.exception(
+            "HTTP failed to begin current mission info: incorrect input data"
+        )
+        return RESTBadRequest(
+            detail="incorrect input data",
+            pretty=pretty,
+        )
+
+    try:
+        await request.app['console_client'].begin_mission(timeout)
     except Exception:
         LOG.exception("HTTP failed to begin current mission")
         return RESTInternalServerError(
@@ -254,9 +288,22 @@ async def begin_current_mission(request):
 
 async def end_current_mission(request):
     pretty = 'pretty' in request.query
+    timeout = request.query.get('timeout')
 
     try:
-        await request.app['console_client'].end_mission()
+        if timeout is not None:
+            timeout = float(timeout)
+    except Exception:
+        LOG.exception(
+            "HTTP failed to end current mission info: incorrect input data"
+        )
+        return RESTBadRequest(
+            detail="incorrect input data",
+            pretty=pretty,
+        )
+
+    try:
+        await request.app['console_client'].end_mission(timeout)
     except Exception:
         LOG.exception("HTTP failed to end current mission")
         return RESTInternalServerError(
@@ -269,9 +316,13 @@ async def end_current_mission(request):
 
 async def unload_current_mission(request):
     pretty = 'pretty' in request.query
+    timeout = request.query.get('timeout')
 
     try:
-        await request.app['console_client'].unload_mission()
+        if timeout is not None:
+            timeout = float(timeout)
+
+        await request.app['console_client'].unload_mission(timeout=timeout)
     except Exception:
         LOG.exception("HTTP failed to unload current mission")
         return RESTInternalServerError(
