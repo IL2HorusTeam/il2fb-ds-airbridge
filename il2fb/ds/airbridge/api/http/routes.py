@@ -58,7 +58,7 @@ def setup_routes(app: web.Application) -> None:
         '/missions/{file_path:[^{}]+\.mis}', views.delete_mission,
     )
     app.router.add_post(
-        '/missions', views.upload_mission,
+        '/missions/{dir_path:[^{}]*}', views.upload_mission,
     )
     app.router.add_get(
         '/missions', views.browse_missions,

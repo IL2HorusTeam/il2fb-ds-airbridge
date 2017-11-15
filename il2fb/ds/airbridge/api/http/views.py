@@ -264,15 +264,22 @@ async def upload_mission(request):
     root_dir = request.app['dedicated_server'].missions_dir
 
     try:
+        relative_dir = request.match_info['dir_path']
+        absolute_dir = (root_dir / relative_dir)
+    except Exception:
+        LOG.exception(
+            "HTTP failed to upload mission: incorrect input data"
+        )
+        return RESTBadRequest(
+            detail="incorrect input data",
+            pretty=pretty,
+        )
+
+    if not absolute_dir.exists():
+        absolute_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
         reader = await request.multipart()
-
-        part = await reader.next()
-        subdir = await part.text()
-
-        absolute_dir = root_dir / subdir
-
-        if not absolute_dir.exists():
-            absolute_dir.mkdir(parents=True, exist_ok=True)
     except Exception:
         LOG.exception("HTTP failed to upload mission: incorrect input data")
         return RESTBadRequest(
