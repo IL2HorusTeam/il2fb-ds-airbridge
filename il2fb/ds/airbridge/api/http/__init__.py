@@ -7,6 +7,7 @@ from typing import Optional
 from aiohttp import web
 
 from il2fb.ds.middleware.console.client import ConsoleClient
+from il2fb.parsers.mission import MissionParser
 
 from il2fb.ds.airbridge.dedicated_server.instance import DedicatedServer
 from il2fb.ds.airbridge.radar import Radar
@@ -28,6 +29,7 @@ def build_http_api(
     chat: ChatStreamingFacility,
     events: EventsStreamingFacility,
     not_parsed_strings: NotParsedStringsStreamingFacility,
+    mission_parser: MissionParser,
     config: Optional[dict]=None,
     **kwargs
 ):
@@ -46,6 +48,7 @@ def build_http_api(
     app['chat'] = chat
     app['events'] = events
     app['not_parsed_strings'] = not_parsed_strings
+    app['mission_parser'] = mission_parser
     app['config'] = config if config is not None else {}
 
     setup_routes(app)

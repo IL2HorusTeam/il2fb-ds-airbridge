@@ -9,9 +9,12 @@ import queue
 from typing import Awaitable
 
 from ddict import DotAccessDict
+
 from il2fb.ds.middleware.console.client import ConsoleClient
 from il2fb.ds.middleware.device_link.client import DeviceLinkClient
+
 from il2fb.parsers.game_log.parsers import GameLogEventParser
+from il2fb.parsers.mission import MissionParser
 
 from il2fb.ds.airbridge.dedicated_server.console import ConsoleProxy
 from il2fb.ds.airbridge.dedicated_server.device_link import DeviceLinkProxy
@@ -67,8 +70,10 @@ class Airbridge:
             device_link_client=self.device_link_client,
         )
 
-        self._game_log_string_queue = queue.Queue()
+        self._mission_parser = MissionParser()
+
         self._game_log_event_parser = GameLogEventParser()
+        self._game_log_string_queue = queue.Queue()
 
         self._game_log_worker = GameLogWorker(
             string_producer=self._game_log_string_queue.get,
@@ -257,6 +262,7 @@ class Airbridge:
                 chat=self.chat,
                 events=self.events,
                 not_parsed_strings=self.not_parsed_strings,
+                mission_parser=self._mission_parser,
                 config=dict(
                     cors=config.cors,
                 ),

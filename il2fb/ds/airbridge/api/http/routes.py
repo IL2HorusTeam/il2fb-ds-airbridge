@@ -51,11 +51,15 @@ def setup_routes(app: web.Application) -> None:
     app.router.add_post(
         '/missions/current/unload', views.unload_current_mission,
     )
+
     app.router.add_post(
         '/missions/{file_path:[^{}]+\.mis}/load', views.load_mission,
     )
     app.router.add_delete(
         '/missions/{file_path:[^{}]+\.mis}', views.delete_mission,
+    )
+    app.router.add_get(
+        '/missions/{file_path:[^{}]+\.mis}', views.get_mission,
     )
 
     app.router.add_post(

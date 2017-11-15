@@ -5,6 +5,8 @@ import re
 
 from stat import S_ISREG, S_ISDIR
 
+from aiohttp.web import FileResponse
+
 from il2fb.commons.organization import Belligerents
 
 from il2fb.ds.airbridge import json
@@ -259,6 +261,40 @@ async def browse_missions(request):
         return RESTSuccess(payload=result, pretty=pretty)
 
 
+async def get_mission(request):
+    pretty = 'pretty' in request.query
+    as_json = 'json' in request.query
+
+    root_dir = request.app['dedicated_server'].missions_dir
+
+    try:
+        relative_path = request.match_info['file_path']
+        absolute_path = (root_dir / relative_path)
+    except Exception:
+        LOG.exception("HTTP failed to get mission: incorrect input data")
+        return RESTBadRequest(
+            detail="incorrect input data",
+            pretty=pretty,
+        )
+
+    if not absolute_path.exists():
+        return RESTNotFound()
+
+    if as_json:
+        try:
+            result = request.app['mission_parser'].parse(str(absolute_path))
+        except Exception:
+            LOG.exception(f"HTTP failed to parse mission `{absolute_path}`")
+            return RESTInternalServerError(
+                detail="failed to parse mission",
+                pretty=pretty,
+            )
+        else:
+            return RESTSuccess(payload=result, pretty=pretty)
+    else:
+        return FileResponse(absolute_path)
+
+
 async def upload_mission(request):
     pretty = 'pretty' in request.query
     root_dir = request.app['dedicated_server'].missions_dir
@@ -327,9 +363,7 @@ async def delete_mission(request):
         relative_path = request.match_info['file_path']
         absolute_path = (root_dir / relative_path)
     except Exception:
-        LOG.exception(
-            "HTTP failed to delete mission: incorrect input data"
-        )
+        LOG.exception("HTTP failed to delete mission: incorrect input data")
         return RESTBadRequest(
             detail="incorrect input data",
             pretty=pretty,
@@ -365,9 +399,7 @@ async def load_mission(request):
         relative_path = request.match_info['file_path']
         absolute_path = (root_dir / relative_path)
     except Exception:
-        LOG.exception(
-            "HTTP failed to load mission: incorrect input data"
-        )
+        LOG.exception("HTTP failed to load mission: incorrect input data")
         return RESTBadRequest(
             detail="incorrect input data",
             pretty=pretty,

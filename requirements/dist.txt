@@ -16,7 +16,8 @@ asyncio-nats-streaming-client==0.2.1
 aiohttp==2.3.2
 aiohttp-cors==0.5.3
 
-il2fb-commons>=1.0.1,<1.1.0
+il2fb-commons>=1.0.1,<1.1
 il2fb-ds-middleware>=1.0.0,<1.1
 il2fb-ds-config>=1.0,<1.1
 il2fb-game-log-parser>=1.0.2,<1.1
+il2fb-mission-parser>=1.1.2,<1.2
