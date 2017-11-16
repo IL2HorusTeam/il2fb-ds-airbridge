@@ -7,11 +7,13 @@ from il2fb.ds.airbridge.api.http.views import humans
 from il2fb.ds.airbridge.api.http.views import misc
 from il2fb.ds.airbridge.api.http.views import missions
 from il2fb.ds.airbridge.api.http.views import radar
+from il2fb.ds.airbridge.api.http.views.streaming import StreamingView
 
 
 def setup_routes(router: AbstractRouter) -> None:
     router.add_get('/health', misc.get_health)
     router.add_get('/info', misc.get_server_info)
+    router.add_get('/streaming', StreamingView)
 
     _setup_humans_routes(router)
     _setup_chat_routes(router)
