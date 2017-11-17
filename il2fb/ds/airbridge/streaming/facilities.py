@@ -23,13 +23,39 @@ LOG = logging.getLogger(__name__)
 
 class StreamingFacility(metaclass=abc.ABCMeta):
 
+    def __init__(self, loop: asyncio.AbstractEventLoop):
+        self._loop = loop
+
+    @abc.abstractmethod
+    async def subscribe(self, subscriber: StreamingSubscriber, **kwargs) -> Awaitable[None]:
+        pass
+
+    @abc.abstractmethod
+    async def unsubscribe(self, subscriber: StreamingSubscriber) -> Awaitable[None]:
+        pass
+
+    @abc.abstractmethod
+    def start(self) -> None:
+        pass
+
+    @abc.abstractmethod
+    def stop(self) -> None:
+        pass
+
+    async def wait_stopped(self) -> Awaitable[None]:
+        pass
+
+
+class BroadcastStreamingFacility(StreamingFacility):
+
     def __init__(
         self,
         loop: asyncio.AbstractEventLoop,
         name: str,
         queue: Optional[asyncio.Queue]=None,
     ):
-        self._loop = loop
+        super().__init__(loop=loop)
+
         self._name = name
 
         self._queue = queue or asyncio.Queue(loop=loop)
@@ -38,10 +64,7 @@ class StreamingFacility(metaclass=abc.ABCMeta):
         self._subscribers = []
         self._subscribers_lock = asyncio.Lock(loop=loop)
 
-    async def subscribe(
-        self,
-        subscriber: StreamingSubscriber,
-    ) -> Awaitable[None]:
+    async def subscribe(self, subscriber: StreamingSubscriber, **kwargs) -> Awaitable[None]:
         with await self._subscribers_lock:
             if not self._subscribers:
                 await self._before_first_subscriber()
@@ -50,10 +73,7 @@ class StreamingFacility(metaclass=abc.ABCMeta):
     async def _before_first_subscriber(self) -> Awaitable[None]:
         pass
 
-    async def unsubscribe(
-        self,
-        subscriber: StreamingSubscriber,
-    ) -> Awaitable[None]:
+    async def unsubscribe(self, subscriber: StreamingSubscriber) -> Awaitable[None]:
         with await self._subscribers_lock:
             self._subscribers.remove(subscriber)
             if not self._subscribers:
@@ -101,7 +121,7 @@ class StreamingFacility(metaclass=abc.ABCMeta):
             await self._queue_task
 
 
-class ChatStreamingFacility(StreamingFacility):
+class ChatStreamingFacility(BroadcastStreamingFacility):
 
     def __init__(
         self,
@@ -123,7 +143,7 @@ class ChatStreamingFacility(StreamingFacility):
         self._queue.put_nowait(item)
 
 
-class EventsStreamingFacility(StreamingFacility):
+class EventsStreamingFacility(BroadcastStreamingFacility):
 
     def __init__(
         self,
@@ -172,7 +192,7 @@ class EventsStreamingFacility(StreamingFacility):
         self._queue_thread_safe.put_nowait(item)
 
 
-class NotParsedStringsStreamingFacility(StreamingFacility):
+class NotParsedStringsStreamingFacility(BroadcastStreamingFacility):
 
     def __init__(
         self,
