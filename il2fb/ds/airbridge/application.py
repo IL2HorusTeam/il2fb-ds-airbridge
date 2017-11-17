@@ -33,7 +33,7 @@ from il2fb.ds.airbridge.streaming.facilities import ChatStreamingFacility
 from il2fb.ds.airbridge.streaming.facilities import EventsStreamingFacility
 from il2fb.ds.airbridge.streaming.facilities import NotParsedStringsStreamingFacility
 
-from il2fb.ds.airbridge.streaming.subscribers.loaders import load_subscribers_from_config
+from il2fb.ds.airbridge.streaming.subscribers.loaders import load_pluggable_subscribers_from_config
 from il2fb.ds.airbridge.watch_dog import TextFileWatchDog
 
 
@@ -105,15 +105,15 @@ class Airbridge:
         )
 
         self._streaming_subscribers = {
-            self.chat: load_subscribers_from_config(
+            self.chat: load_pluggable_subscribers_from_config(
                 app=self,
                 config=config.streaming.chat,
             ),
-            self.events: load_subscribers_from_config(
+            self.events: load_pluggable_subscribers_from_config(
                 app=self,
                 config=config.streaming.events,
             ),
-            self.not_parsed_strings: load_subscribers_from_config(
+            self.not_parsed_strings: load_pluggable_subscribers_from_config(
                 app=self,
                 config=config.streaming.not_parsed_strings,
             ),
@@ -165,16 +165,16 @@ class Airbridge:
             return
 
         for subscriber in subscribers:
-            subscriber.open()
+            subscriber.plug_in()
 
         awaitables = [
-            subscriber.wait_opened()
+            subscriber.wait_plugged()
             for subscriber in subscribers
         ]
         await asyncio.gather(*awaitables, loop=self.loop)
 
         awaitables = [
-            facility.subscribe(subscriber.write)
+            facility.subscribe(subscriber)
             for facility, subscriber_group in self._streaming_subscribers.items()
             for subscriber in subscriber_group
         ]
@@ -355,17 +355,17 @@ class Airbridge:
             return
 
         awaitables = [
-            facility.unsubscribe(subscriber.write)
+            facility.unsubscribe(subscriber)
             for facility, subscriber_group in self._streaming_subscribers.items()
             for subscriber in subscriber_group
         ]
         await asyncio.gather(*awaitables, loop=self.loop)
 
         for subscriber in subscribers:
-            subscriber.close()
+            subscriber.unplug()
 
         awaitables = [
-            subscriber.wait_closed()
+            subscriber.wait_unplugged()
             for subscriber in subscribers
         ]
         await asyncio.gather(*awaitables, loop=self.loop)

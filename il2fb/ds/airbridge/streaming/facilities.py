@@ -80,7 +80,7 @@ class StreamingFacility(metaclass=abc.ABCMeta):
 
                 try:
                     awaitables = [
-                        subscriber(item)
+                        subscriber.write(item)
                         for subscriber in self._subscribers
                     ]
                     await asyncio.gather(*awaitables, loop=self._loop)

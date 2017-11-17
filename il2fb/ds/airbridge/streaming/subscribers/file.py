@@ -5,10 +5,10 @@ from typing import Any, Awaitable
 
 from il2fb.ds.airbridge import json
 from il2fb.ds.airbridge.typing import StringOrPath
-from il2fb.ds.airbridge.streaming.subscribers.base import StreamingSubscriber
+from il2fb.ds.airbridge.streaming.subscribers.base import PluggableStreamingSubscriber
 
 
-class TextFileStreamingSink(StreamingSubscriber):
+class TextFileStreamingSink(PluggableStreamingSubscriber):
 
     def __init__(self, app, path: StringOrPath):
         super().__init__(app=app)
@@ -17,7 +17,7 @@ class TextFileStreamingSink(StreamingSubscriber):
         self._stream = None
         self._stat = None
 
-    def open(self) -> None:
+    def plug_in(self) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._stream = self._path.open('a', buffering=1)
         self._stat = self._path.lstat()
@@ -41,7 +41,7 @@ class TextFileStreamingSink(StreamingSubscriber):
             self.close()
             self.open()
 
-    def close(self) -> None:
+    def unplug(self) -> None:
         try:
             self._stream.flush()
         finally:

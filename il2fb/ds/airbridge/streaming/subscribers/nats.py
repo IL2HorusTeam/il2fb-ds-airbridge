@@ -8,13 +8,13 @@ from typing import Any, Awaitable
 from nats_stream.aio.publisher import Publisher
 
 from il2fb.ds.airbridge import json
-from il2fb.ds.airbridge.streaming.subscribers.base import StreamingSubscriber
+from il2fb.ds.airbridge.streaming.subscribers.base import PluggableStreamingSubscriber
 
 
 LOG = logging.getLogger(__name__)
 
 
-class NATSStreamingSink(StreamingSubscriber):
+class NATSStreamingSink(PluggableStreamingSubscriber):
 
     def __init__(self, app, subject: str):
         super().__init__(app=app)
@@ -23,7 +23,7 @@ class NATSStreamingSink(StreamingSubscriber):
         self._queue = asyncio.Queue(loop=app.loop)
         self._queue_task = None
 
-    def open(self) -> None:
+    def plug_in(self) -> None:
         self._client = self._app.nats_streaming_client
         self._publisher = Publisher(
             sc=self._client,
@@ -37,11 +37,11 @@ class NATSStreamingSink(StreamingSubscriber):
     def _handle_ack(self, ack) -> None:
         LOG.debug(f"nats streaming ack (guid={ack}, subject={self._subject})")
 
-    def close(self) -> None:
+    def unplug(self) -> None:
         if self._queue_task:
             self._queue.put_nowait(None)
 
-    async def wait_closed(self) -> Awaitable[None]:
+    async def wait_unplugged(self) -> Awaitable[None]:
         if self._queue_task:
             await self._queue_task
 
