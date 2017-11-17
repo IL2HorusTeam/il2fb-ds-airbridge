@@ -91,16 +91,16 @@ class Airbridge:
         )
         self._game_log_watch_dog_thread = None
 
-        self.chat = ChatStreamingFacility(
+        self.chat_stream = ChatStreamingFacility(
             loop=loop,
             console_client=console_client,
         )
-        self.events = EventsStreamingFacility(
+        self.events_stream = EventsStreamingFacility(
             loop=loop,
             console_client=console_client,
             game_log_worker=self._game_log_worker,
         )
-        self.not_parsed_strings = NotParsedStringsStreamingFacility(
+        self.not_parsed_strings_stream = NotParsedStringsStreamingFacility(
             loop=loop,
             game_log_worker=self._game_log_worker,
         )
@@ -120,9 +120,9 @@ class Airbridge:
         self._http_api_server = None
 
         self._streaming_facility_to_static_subscribers_config_map = {
-            self.chat: config.streaming.chat.subscribers,
-            self.events: config.streaming.events.subscribers,
-            self.not_parsed_strings: config.streaming.not_parsed_strings.subscribers,
+            self.chat_stream: config.streaming.chat.subscribers,
+            self.events_stream: config.streaming.events.subscribers,
+            self.not_parsed_strings_stream: config.streaming.not_parsed_strings.subscribers,
             self.radar_stream: config.streaming.radar.subscribers,
         }
         self._static_streaming_subscribers = {}
@@ -185,9 +185,9 @@ class Airbridge:
             await asyncio.gather(*awaitables, loop=self.loop)
 
     def _start_streaming_facilities(self) -> None:
-        self.chat.start()
-        self.events.start()
-        self.not_parsed_strings.start()
+        self.chat_stream.start()
+        self.events_stream.start()
+        self.not_parsed_strings_stream.start()
         self.radar_stream.start()
 
     def _start_game_log_processing(self) -> None:
@@ -264,9 +264,9 @@ class Airbridge:
                 dedicated_server=self.dedicated_server,
                 console_client=self.console_client,
                 radar=self.radar,
-                chat=self.chat,
-                events=self.events,
-                not_parsed_strings=self.not_parsed_strings,
+                chat_stream=self.chat_stream,
+                events_stream=self.events_stream,
+                not_parsed_strings_stream=self.not_parsed_strings_stream,
                 radar_stream=self.radar_stream,
                 mission_parser=self._mission_parser,
                 config=dict(
@@ -339,18 +339,18 @@ class Airbridge:
             self._game_log_worker_thread.join()
 
     async def _stop_streaming_facilities(self) -> Awaitable[None]:
-        self.chat.stop()
-        self.events.stop()
-        self.not_parsed_strings.stop()
+        self.chat_stream.stop()
+        self.events_stream.stop()
+        self.not_parsed_strings_stream.stop()
         self.radar_stream.stop()
 
         await self._wait_streaming_facilities()
 
     async def _wait_streaming_facilities(self) -> Awaitable[None]:
         await asyncio.gather(
-            self.chat.wait_stopped(),
-            self.events.wait_stopped(),
-            self.not_parsed_strings.wait_stopped(),
+            self.chat_stream.wait_stopped(),
+            self.events_stream.wait_stopped(),
+            self.not_parsed_strings_stream.wait_stopped(),
             self.radar_stream.wait_stopped(),
             loop=self.loop,
         )

@@ -370,13 +370,21 @@ class RadarStreamingFacility(StreamingFacility):
                 coroutine = self._radar.get_all_moving_actors_positions(
                     timeout=self._request_timeout,
                 )
-                self._refresh_task = asyncio.ensure_future(coroutine, loop=self._loop)
+                self._refresh_task = asyncio.ensure_future(
+                    coroutine,
+                    loop=self._loop,
+                )
                 result = await self._refresh_task
             except CancelledError:
                 LOG.debug(
                     f"refresh task for streaming facility '{self._name}' "
                     f"was cancelled"
                 )
+            except ConnectionAbortedError:
+                if self._do_stop:
+                    break
+                else:
+                    raise
             finally:
                 self._refresh_task = None
 

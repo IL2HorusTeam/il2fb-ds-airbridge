@@ -27,9 +27,9 @@ def build_http_api(
     dedicated_server: DedicatedServer,
     console_client: ConsoleClient,
     radar: Radar,
-    chat: ChatStreamingFacility,
-    events: EventsStreamingFacility,
-    not_parsed_strings: NotParsedStringsStreamingFacility,
+    chat_stream: ChatStreamingFacility,
+    events_stream: EventsStreamingFacility,
+    not_parsed_strings_stream: NotParsedStringsStreamingFacility,
     radar_stream: RadarStreamingFacility,
     mission_parser: MissionParser,
     config: Optional[dict]=None,
@@ -50,9 +50,9 @@ def build_http_api(
     app['mission_parser'] = mission_parser
     app['config'] = config if config is not None else {}
 
-    app['chat'] = chat
-    app['events'] = events
-    app['not_parsed_strings'] = not_parsed_strings
+    app['chat_stream'] = chat_stream
+    app['events_stream'] = events_stream
+    app['not_parsed_strings_stream'] = not_parsed_strings_stream
     app['radar_stream'] = radar_stream
 
     setup_routes(app.router)

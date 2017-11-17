@@ -34,10 +34,10 @@ class StreamingView(StreamingSubscriber, web.View):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._chat = self.request.app['chat']
-        self._events = self.request.app['events']
-        self._not_parsed_strings = self.request.app['not_parsed_strings']
-        self._radar = self.request.app['radar_stream']
+        self._chat_stream = self.request.app['chat_stream']
+        self._events_stream = self.request.app['events_stream']
+        self._not_parsed_strings_stream = self.request.app['not_parsed_strings_stream']
+        self._radar_stream = self.request.app['radar_stream']
 
         self._ws = None
         self._subscriptions = []
@@ -113,36 +113,36 @@ class StreamingView(StreamingSubscriber, web.View):
             await subscription.unsubscribe(self)
 
     async def _subscribe_to_chat(self, **kwargs) -> Awaitable[None]:
-        await self._chat.subscribe(self, **kwargs)
-        self._subscriptions.append(self._chat)
+        await self._chat_stream.subscribe(self, **kwargs)
+        self._subscriptions.append(self._chat_stream)
 
     async def _unsubscribe_from_chat(self) -> Awaitable[None]:
-        await self._chat.unsubscribe(self)
-        self._subscriptions.remove(self._chat)
+        await self._chat_stream.unsubscribe(self)
+        self._subscriptions.remove(self._chat_stream)
 
     async def _subscribe_to_events(self, **kwargs) -> Awaitable[None]:
-        await self._events.subscribe(self, **kwargs)
-        self._subscriptions.append(self._events)
+        await self._events_stream.subscribe(self, **kwargs)
+        self._subscriptions.append(self._events_stream)
 
     async def _unsubscribe_from_events(self) -> Awaitable[None]:
-        await self._events.unsubscribe(self)
-        self._subscriptions.remove(self._events)
+        await self._events_stream.unsubscribe(self)
+        self._subscriptions.remove(self._events_stream)
 
     async def _subscribe_to_not_parsed_strings(self, **kwargs) -> Awaitable[None]:
-        await self._not_parsed_strings.subscribe(self, **kwargs)
-        self._subscriptions.append(self._not_parsed_strings)
+        await self._not_parsed_strings_stream.subscribe(self, **kwargs)
+        self._subscriptions.append(self._not_parsed_strings_stream)
 
     async def _unsubscribe_from_not_parsed_strings(self) -> Awaitable[None]:
-        await self._not_parsed_strings.unsubscribe(self)
-        self._subscriptions.remove(self._not_parsed_strings)
+        await self._not_parsed_strings_stream.unsubscribe(self)
+        self._subscriptions.remove(self._not_parsed_strings_stream)
 
     async def _subscribe_to_radar(self, **kwargs) -> Awaitable[None]:
-        await self._radar.subscribe(self, **kwargs)
-        self._subscriptions.append(self._radar)
+        await self._radar_stream.subscribe(self, **kwargs)
+        self._subscriptions.append(self._radar_stream)
 
     async def _unsubscribe_from_radar(self) -> Awaitable[None]:
-        await self._radar.unsubscribe(self)
-        self._subscriptions.remove(self._radar)
+        await self._radar_stream.unsubscribe(self)
+        self._subscriptions.remove(self._radar_stream)
 
     async def write(self, o: Any) -> Awaitable[None]:
         await self._ws.send_str(json.dumps(o))
