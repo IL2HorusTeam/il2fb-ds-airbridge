@@ -25,6 +25,9 @@ class STREAMING_OPCODE(IntEnum):
     SUBSCRIBE_TO_NOT_PARSED_STRINGS = 20
     UNSUBSCRIBE_FROM_NOT_PARSED_STRINGS = 21
 
+    SUBSCRIBE_TO_RADAR = 30
+    UNSUBSCRIBE_FROM_RADAR = 31
+
 
 class StreamingView(StreamingSubscriber, web.View):
 
@@ -34,6 +37,7 @@ class StreamingView(StreamingSubscriber, web.View):
         self._chat = self.request.app['chat']
         self._events = self.request.app['events']
         self._not_parsed_strings = self.request.app['not_parsed_strings']
+        self._radar = self.request.app['radar_stream']
 
         self._ws = None
         self._subscriptions = []
@@ -47,6 +51,9 @@ class StreamingView(StreamingSubscriber, web.View):
 
             STREAMING_OPCODE.SUBSCRIBE_TO_NOT_PARSED_STRINGS: self._subscribe_to_not_parsed_strings,
             STREAMING_OPCODE.UNSUBSCRIBE_FROM_NOT_PARSED_STRINGS: self._unsubscribe_from_not_parsed_strings,
+
+            STREAMING_OPCODE.SUBSCRIBE_TO_RADAR: self._subscribe_to_radar,
+            STREAMING_OPCODE.UNSUBSCRIBE_FROM_RADAR: self._unsubscribe_from_radar,
         }
 
     async def get(self):
@@ -128,6 +135,14 @@ class StreamingView(StreamingSubscriber, web.View):
     async def _unsubscribe_from_not_parsed_strings(self) -> Awaitable[None]:
         await self._not_parsed_strings.unsubscribe(self)
         self._subscriptions.remove(self._not_parsed_strings)
+
+    async def _subscribe_to_radar(self, **kwargs) -> Awaitable[None]:
+        await self._radar.subscribe(self, **kwargs)
+        self._subscriptions.append(self._radar)
+
+    async def _unsubscribe_from_radar(self) -> Awaitable[None]:
+        await self._radar.unsubscribe(self)
+        self._subscriptions.remove(self._radar)
 
     async def write(self, o: Any) -> Awaitable[None]:
         await self._ws.send_str(json.dumps(o))

@@ -2,18 +2,25 @@
 
 import abc
 import asyncio
+import functools
 import logging
+import math
+import time
 
+from concurrent.futures import CancelledError
 from typing import Awaitable, Optional
 
 import janus
 
 from il2fb.commons.events import Event
+
 from il2fb.ds.middleware.console.client import ConsoleClient
 from il2fb.ds.middleware.console.events import ChatMessageWasReceived
+
 from il2fb.parsers.game_log import events as game_log_events
 
 from il2fb.ds.airbridge.dedicated_server.game_log import GameLogWorker
+from il2fb.ds.airbridge.radar import Radar
 from il2fb.ds.airbridge.structures import TimestampedData
 from il2fb.ds.airbridge.streaming.subscribers.base import StreamingSubscriber
 
@@ -23,8 +30,10 @@ LOG = logging.getLogger(__name__)
 
 class StreamingFacility(metaclass=abc.ABCMeta):
 
-    def __init__(self, loop: asyncio.AbstractEventLoop):
+    def __init__(self, loop: asyncio.AbstractEventLoop, name: str):
         self._loop = loop
+        self._name = name
+        self._main_task = None
 
     @abc.abstractmethod
     async def subscribe(self, subscriber: StreamingSubscriber, **kwargs) -> Awaitable[None]:
@@ -34,8 +43,27 @@ class StreamingFacility(metaclass=abc.ABCMeta):
     async def unsubscribe(self, subscriber: StreamingSubscriber) -> Awaitable[None]:
         pass
 
-    @abc.abstractmethod
     def start(self) -> None:
+        coroutine = self._try_run()
+        self._main_task = asyncio.ensure_future(coroutine, loop=self._loop)
+
+    async def _try_run(self) -> Awaitable[None]:
+        try:
+            LOG.info(
+                f"streaming facility '{self._name}' was started"
+            )
+            await self._run()
+        except Exception:
+            LOG.exception(
+                f"streaming facility '{self._name}' was terminated"
+            )
+        else:
+            LOG.info(
+                f"streaming facility '{self._name}' was stopped"
+            )
+
+    @abc.abstractmethod
+    async def _run(self) -> Awaitable[None]:
         pass
 
     @abc.abstractmethod
@@ -43,10 +71,11 @@ class StreamingFacility(metaclass=abc.ABCMeta):
         pass
 
     async def wait_stopped(self) -> Awaitable[None]:
-        pass
+        if self._main_task:
+            await self._main_task
 
 
-class BroadcastStreamingFacility(StreamingFacility):
+class QueueStreamingFacility(StreamingFacility):
 
     def __init__(
         self,
@@ -54,12 +83,9 @@ class BroadcastStreamingFacility(StreamingFacility):
         name: str,
         queue: Optional[asyncio.Queue]=None,
     ):
-        super().__init__(loop=loop)
-
-        self._name = name
+        super().__init__(loop=loop, name=name)
 
         self._queue = queue or asyncio.Queue(loop=loop)
-        self._queue_task = None
 
         self._subscribers = []
         self._subscribers_lock = asyncio.Lock(loop=loop)
@@ -82,13 +108,7 @@ class BroadcastStreamingFacility(StreamingFacility):
     async def _after_last_subscriber(self) -> Awaitable[None]:
         pass
 
-    def start(self) -> None:
-        coroutine = self._process_queue()
-        self._queue_task = self._loop.create_task(coroutine)
-
-    async def _process_queue(self) -> Awaitable[None]:
-        LOG.info(f"streaming facility '{self._name}' was started")
-
+    async def _run(self) -> Awaitable[None]:
         while True:
             item = await self._queue.get()
             if item is None:
@@ -110,18 +130,12 @@ class BroadcastStreamingFacility(StreamingFacility):
                         f"(facility='{self._name}', item={repr(item)})"
                     )
 
-        LOG.info(f"streaming facility '{self._name}' was stopped")
-
     def stop(self) -> None:
-        if self._queue_task:
+        if self._main_task:
             self._queue.put_nowait(None)
 
-    async def wait_stopped(self) -> Awaitable[None]:
-        if self._queue_task:
-            await self._queue_task
 
-
-class ChatStreamingFacility(BroadcastStreamingFacility):
+class ChatStreamingFacility(QueueStreamingFacility):
 
     def __init__(
         self,
@@ -143,7 +157,7 @@ class ChatStreamingFacility(BroadcastStreamingFacility):
         self._queue.put_nowait(item)
 
 
-class EventsStreamingFacility(BroadcastStreamingFacility):
+class EventsStreamingFacility(QueueStreamingFacility):
 
     def __init__(
         self,
@@ -192,7 +206,7 @@ class EventsStreamingFacility(BroadcastStreamingFacility):
         self._queue_thread_safe.put_nowait(item)
 
 
-class NotParsedStringsStreamingFacility(BroadcastStreamingFacility):
+class NotParsedStringsStreamingFacility(QueueStreamingFacility):
 
     def __init__(
         self,
@@ -220,3 +234,187 @@ class NotParsedStringsStreamingFacility(BroadcastStreamingFacility):
     def _consume(self, s: str) -> None:
         item = TimestampedData(s)
         self._queue.put_nowait(item)
+
+
+class _PeriodicSubscribers(list):
+
+    def __init__(self, refresh_period: float, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._refresh_period = refresh_period
+        self._last_refresh_time = None
+
+    def needs_refresh(self, when: float) -> bool:
+        return (
+            (self._last_refresh_time is None) or
+            (when - self._last_refresh_time) >= self._refresh_period
+        )
+
+    def ack_refresh(self, when: float):
+        if self._last_refresh_time is None:
+            self._last_refresh_time = when
+        else:
+            elapsed_time = (when - self._last_refresh_time)
+            _, buzz = divmod(elapsed_time, self._refresh_period)
+            self._last_refresh_time = (when - buzz)
+
+
+class RadarStreamingFacility(StreamingFacility):
+
+    def __init__(
+        self,
+        loop: asyncio.AbstractEventLoop,
+        radar: Radar,
+        request_timeout: Optional[float]=None,
+        name: str="radar",
+    ):
+        super().__init__(loop=loop, name=name)
+
+        self._radar = radar
+        self._request_timeout = request_timeout
+
+        self._do_stop = False
+
+        self._resume_event = asyncio.Event(loop=loop)
+        self._resume_event.clear()
+
+        self._tick_task = None
+        self._tick_period = None
+        self._tick_period_lock = asyncio.Lock(loop=loop)
+
+        self._refresh_task = None
+
+        self._subscribers = dict()
+        self._subscribers_lock = asyncio.Lock(loop=loop)
+
+    async def subscribe(
+        self,
+        subscriber: StreamingSubscriber,
+        refresh_period: float=5,
+        **kwargs
+    ) -> Awaitable[None]:
+
+        with await self._subscribers_lock:
+            group = self._subscribers.get(refresh_period)
+
+            if group is None:
+                group = _PeriodicSubscribers(refresh_period, [subscriber, ])
+                self._subscribers[refresh_period] = group
+
+                periods = self._subscribers.keys()
+                with await self._tick_period_lock:
+                    self._tick_period = functools.reduce(math.gcd, periods)
+            else:
+                group.append(subscriber)
+
+            self._resume_event.set()
+
+    async def unsubscribe(self, subscriber: StreamingSubscriber) -> Awaitable[None]:
+        with await self._subscribers_lock:
+            for refresh_period, group in self._subscribers.items():
+                if subscriber in group:
+                    group.remove(subscriber)
+
+                    if not group:
+                        del self._subscribers[refresh_period]
+
+                    if not self._subscribers:
+                        self._resume_event.clear()
+
+                        if self._tick_task:
+                            self._tick_task.cancel()
+                        elif self._refresh_task:
+                            self._refresh_task.cancel()
+
+                    break
+
+    async def _run(self) -> Awaitable[None]:
+        while True:
+            if self._do_stop:
+                break
+            elif not self._resume_event.is_set():
+                await self._resume_event.wait()
+                if self._do_stop:
+                    break
+
+            with await self._tick_period_lock:
+                tick_period = self._tick_period
+
+            try:
+                coroutine = asyncio.sleep(tick_period, loop=self._loop)
+                self._tick_task = asyncio.ensure_future(coroutine, loop=self._loop)
+                await self._tick_task
+            except CancelledError:
+                LOG.debug(
+                    f"tick task for streaming facility '{self._name}' "
+                    f"was cancelled"
+                )
+            finally:
+                self._tick_task = None
+
+            if self._do_stop:
+                break
+            elif not self._resume_event.is_set():
+                await self._resume_event.wait()
+                if self._do_stop:
+                    break
+
+            now = time.monotonic()
+            do_refresh = any(
+                group.needs_refresh(now)
+                for group in self._subscribers.values()
+            )
+            if not do_refresh:
+                continue
+
+            try:
+                coroutine = self._radar.get_all_moving_actors_positions(
+                    timeout=self._request_timeout,
+                )
+                self._refresh_task = asyncio.ensure_future(coroutine, loop=self._loop)
+                result = await self._refresh_task
+            except CancelledError:
+                LOG.debug(
+                    f"refresh task for streaming facility '{self._name}' "
+                    f"was cancelled"
+                )
+            finally:
+                self._refresh_task = None
+
+            if self._do_stop:
+                break
+            elif not self._resume_event.is_set():
+                await self._resume_event.wait()
+                if self._do_stop:
+                    break
+                else:
+                    continue
+
+            # TODO: skip, if empty
+
+            item = TimestampedData(result)
+            now = time.monotonic()
+
+            for group in self._subscribers.values():
+                if group.needs_refresh(now):
+                    try:
+                        awaitables = [
+                            subscriber.write(item)
+                            for subscriber in group
+                        ]
+                        await asyncio.gather(*awaitables, loop=self._loop)
+                    except:
+                        LOG.exception(
+                            f"failed to handle radar item (item={repr(item)})"
+                        )
+                    else:
+                        group.ack_refresh(now)
+
+    def stop(self) -> None:
+        self._do_stop = True
+        self._resume_event.set()
+
+        if self._tick_task:
+            self._tick_task.cancel()
+
+        if self._refresh_task:
+            self._refresh_task.cancel()

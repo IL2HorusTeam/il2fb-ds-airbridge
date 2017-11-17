@@ -32,8 +32,9 @@ from il2fb.ds.airbridge.radar import Radar
 from il2fb.ds.airbridge.streaming.facilities import ChatStreamingFacility
 from il2fb.ds.airbridge.streaming.facilities import EventsStreamingFacility
 from il2fb.ds.airbridge.streaming.facilities import NotParsedStringsStreamingFacility
+from il2fb.ds.airbridge.streaming.facilities import RadarStreamingFacility
 
-from il2fb.ds.airbridge.streaming.subscribers.loaders import load_pluggable_subscribers_from_config
+from il2fb.ds.airbridge.streaming.subscribers.loaders import load_subscribers_with_subscription_options
 from il2fb.ds.airbridge.watch_dog import TextFileWatchDog
 
 
@@ -103,21 +104,11 @@ class Airbridge:
             loop=loop,
             game_log_worker=self._game_log_worker,
         )
-
-        self._streaming_subscribers = {
-            self.chat: load_pluggable_subscribers_from_config(
-                app=self,
-                config=config.streaming.chat,
-            ),
-            self.events: load_pluggable_subscribers_from_config(
-                app=self,
-                config=config.streaming.events,
-            ),
-            self.not_parsed_strings: load_pluggable_subscribers_from_config(
-                app=self,
-                config=config.streaming.not_parsed_strings,
-            ),
-        }
+        self.radar_stream = RadarStreamingFacility(
+            loop=loop,
+            radar=self.radar,
+            request_timeout=config.streaming.radar.get('request_timeout'),
+        )
 
         self.nats_client = None
         self.nats_streaming_client = None
@@ -128,9 +119,17 @@ class Airbridge:
         self._http_api_handler = None
         self._http_api_server = None
 
+        self._streaming_facility_to_static_subscribers_config_map = {
+            self.chat: config.streaming.chat.subscribers,
+            self.events: config.streaming.events.subscribers,
+            self.not_parsed_strings: config.streaming.not_parsed_strings.subscribers,
+            self.radar_stream: config.streaming.radar.subscribers,
+        }
+        self._static_streaming_subscribers = {}
+
     async def start(self) -> Awaitable[None]:
         await self._maybe_start_nats_clients()
-        await self._maybe_start_streaming_subscribers()
+        await self._maybe_start_static_streaming_subscribers()
         self._start_streaming_facilities()
         self._start_game_log_processing()
         await self._maybe_start_proxies()
@@ -157,33 +156,39 @@ class Airbridge:
             client_id=streaming_config.client_id,
         )
 
-    async def _maybe_start_streaming_subscribers(self) -> Awaitable[None]:
-        subscriber_groups = self._streaming_subscribers.values()
-        subscribers = list(itertools.chain(*subscriber_groups))
+    async def _maybe_start_static_streaming_subscribers(self) -> Awaitable[None]:
+        for facility, config in self._streaming_facility_to_static_subscribers_config_map.items():
+            subscribers_with_subscription_options = load_subscribers_with_subscription_options(
+                app=self,
+                config=config,
+            )
 
-        if not subscribers:
-            return
+            if not subscribers_with_subscription_options:
+                continue
 
-        for subscriber in subscribers:
-            subscriber.plug_in()
+            subscribers = list(zip(*subscribers_with_subscription_options))[0]
+            self._static_streaming_subscribers[facility] = subscribers
 
-        awaitables = [
-            subscriber.wait_plugged()
-            for subscriber in subscribers
-        ]
-        await asyncio.gather(*awaitables, loop=self.loop)
+            for subscriber in subscribers:
+                subscriber.plug_in()
 
-        awaitables = [
-            facility.subscribe(subscriber)
-            for facility, subscriber_group in self._streaming_subscribers.items()
-            for subscriber in subscriber_group
-        ]
-        await asyncio.gather(*awaitables, loop=self.loop)
+            awaitables = [
+                subscriber.wait_plugged()
+                for subscriber in subscribers
+            ]
+            await asyncio.gather(*awaitables, loop=self.loop)
+
+            awaitables = [
+                facility.subscribe(subscriber, **options)
+                for subscriber, options in subscribers_with_subscription_options
+            ]
+            await asyncio.gather(*awaitables, loop=self.loop)
 
     def _start_streaming_facilities(self) -> None:
         self.chat.start()
         self.events.start()
         self.not_parsed_strings.start()
+        self.radar_stream.start()
 
     def _start_game_log_processing(self) -> None:
         self._start_game_log_worker()
@@ -262,6 +267,7 @@ class Airbridge:
                 chat=self.chat,
                 events=self.events,
                 not_parsed_strings=self.not_parsed_strings,
+                radar_stream=self.radar_stream,
                 mission_parser=self._mission_parser,
                 config=dict(
                     cors=config.cors,
@@ -293,7 +299,7 @@ class Airbridge:
         await self._maybe_wait_proxies()
         self._maybe_stop_game_log_processing()
         await self._stop_streaming_facilities()
-        await self._maybe_stop_streaming_subscribers()
+        await self._maybe_stop_static_streaming_subscribers()
         await self._maybe_stop_nats_clients()
 
     async def _maybe_wait_api_stopped(self) -> Awaitable[None]:
@@ -336,6 +342,7 @@ class Airbridge:
         self.chat.stop()
         self.events.stop()
         self.not_parsed_strings.stop()
+        self.radar_stream.stop()
 
         await self._wait_streaming_facilities()
 
@@ -344,11 +351,12 @@ class Airbridge:
             self.chat.wait_stopped(),
             self.events.wait_stopped(),
             self.not_parsed_strings.wait_stopped(),
+            self.radar_stream.wait_stopped(),
             loop=self.loop,
         )
 
-    async def _maybe_stop_streaming_subscribers(self) -> Awaitable[None]:
-        subscriber_groups = self._streaming_subscribers.values()
+    async def _maybe_stop_static_streaming_subscribers(self) -> Awaitable[None]:
+        subscriber_groups = self._static_streaming_subscribers.values()
         subscribers = list(itertools.chain(*subscriber_groups))
 
         if not subscribers:
@@ -356,7 +364,7 @@ class Airbridge:
 
         awaitables = [
             facility.unsubscribe(subscriber)
-            for facility, subscriber_group in self._streaming_subscribers.items()
+            for facility, subscriber_group in self._static_streaming_subscribers.items()
             for subscriber in subscriber_group
         ]
         await asyncio.gather(*awaitables, loop=self.loop)

@@ -10,6 +10,18 @@ from jsonschema import validate
 CONFIG_SCHEMA = {
     'type': 'object',
     'properties': {
+        'wine_bin_path': {
+            'type': 'string',
+        },
+        'state': {
+            'type': 'object',
+            'properties': {
+                'file_path': {
+                    'type': 'string',
+                },
+            },
+            'required': ['file_path', ],
+        },
         'ds': {
             'type': 'object',
             'properties': {
@@ -60,6 +72,69 @@ CONFIG_SCHEMA = {
                 },
             },
             'required': ['exe_path', ],
+        },
+        'nats': {
+            'type': 'object',
+            'properties': {
+                'servers': {
+                    'type': 'array',
+                    'items': {
+                        'type': 'string',
+                        'minItems': 1,
+                        'uniqueItems': True,
+                    },
+                },
+                'streaming': {
+                    'type': 'object',
+                    'properties': {
+                        'cluster_id': {
+                            'type': 'string',
+                        },
+                        'client_id': {
+                            'type': 'string',
+                        },
+                    },
+                    'required': ['cluster_id', 'client_id', ],
+                },
+            },
+            'required': ['servers', ],
+        },
+        'api': {
+            'type': 'object',
+            'properties': {
+                'nats': {
+                    'type': 'object',
+                    'properties': {
+                        'subject': {
+                            'type': 'string',
+                        },
+                    },
+                    'required': ['subject', ],
+                },
+                'http': {
+                    'type': 'object',
+                    'properties': {
+                        'bind': {
+                            'type': 'object',
+                            'properties': {
+                                'address': {
+                                    'format': 'string',
+                                },
+                                'port': {
+                                    'type': 'integer',
+                                    'minimum': 0,
+                                    'maximum': 65535,
+                                },
+                            },
+                            'required': ['port', ],
+                        },
+                        'cors': {
+                            'type': 'object',
+                        },
+                    },
+                    'required': ['bind', ],
+                },
+            },
         },
         'logging': {
             'type': 'object',
@@ -125,161 +200,217 @@ CONFIG_SCHEMA = {
                 },
             },
         },
-        'wine_bin_path': {
-            'type': 'string',
-        },
-        'state': {
-            'type': 'object',
-            'properties': {
-                'file_path': {
-                    'type': 'string',
-                },
-            },
-            'required': ['file_path', ],
-        },
-        'nats': {
-            'type': 'object',
-            'properties': {
-                'servers': {
-                    'type': 'array',
-                    'items': {
-                        'type': 'string',
-                        'minItems': 1,
-                        'uniqueItems': True,
-                    },
-                },
-                'streaming': {
-                    'type': 'object',
-                    'properties': {
-                        'cluster_id': {
-                            'type': 'string',
-                        },
-                        'client_id': {
-                            'type': 'string',
-                        },
-                    },
-                    'required': ['cluster_id', 'client_id', ],
-                },
-            },
-            'required': ['servers', ],
-        },
-        'api': {
-            'type': 'object',
-            'properties': {
-                'nats': {
-                    'type': 'object',
-                    'properties': {
-                        'subject': {
-                            'type': 'string',
-                        },
-                    },
-                    'required': ['subject', ],
-                },
-                'http': {
-                    'type': 'object',
-                    'properties': {
-                        'bind': {
-                            'type': 'object',
-                            'properties': {
-                                'address': {
-                                    'format': 'string',
-                                },
-                                'port': {
-                                    'type': 'integer',
-                                    'minimum': 0,
-                                    'maximum': 65535,
-                                },
-                            },
-                            'required': ['port', ],
-                        },
-                        'cors': {
-                            'type': 'object',
-                        },
-                    },
-                    'required': ['bind', ],
-                },
-            },
-        },
         'streaming': {
             'type': 'object',
             'properties': {
+
                 'chat': {
                     'type': 'object',
                     'properties': {
-                        'file': {
+
+                        'subscribers': {
                             'type': 'object',
                             'properties': {
-                                'path': {
-                                    'type': 'string',
+
+                                'file': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'args': {
+                                            'type': 'object',
+                                            'properties': {
+                                                'path': {
+                                                    'type': 'string',
+                                                },
+                                            },
+                                            'required': ['path', ],
+                                        },
+                                    },
+                                    'required': ['args', ],
+                                },
+
+                                'nats': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'args': {
+                                            'type': 'object',
+                                            'properties': {
+                                                'subject': {
+                                                    'type': 'string',
+                                                },
+                                            },
+                                            'required': ['subject', ],
+                                        },
+                                    },
+                                    'required': ['args', ],
                                 },
                             },
-                            'required': ['path', ],
-                        },
-                        'nats': {
-                            'type': 'object',
-                            'properties': {
-                                'subject': {
-                                    'type': 'string',
-                                },
-                            },
-                            'required': ['subject', ],
                         },
                     },
                 },
+
                 'events': {
                     'type': 'object',
                     'properties': {
-                        'file': {
+
+                        'subscribers': {
                             'type': 'object',
                             'properties': {
-                                'path': {
-                                    'type': 'string',
+
+                                'file': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'args': {
+                                            'type': 'object',
+                                            'properties': {
+                                                'path': {
+                                                    'type': 'string',
+                                                },
+                                            },
+                                            'required': ['path', ],
+                                        },
+                                    },
+                                    'required': ['args', ],
+                                },
+
+                                'nats': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'args': {
+                                            'type': 'object',
+                                            'properties': {
+                                                'subject': {
+                                                    'type': 'string',
+                                                },
+                                            },
+                                            'required': ['subject', ],
+                                        },
+                                    },
+                                    'required': ['args', ],
                                 },
                             },
-                            'required': ['path', ],
-                        },
-                        'nats': {
-                            'type': 'object',
-                            'properties': {
-                                'subject': {
-                                    'type': 'string',
-                                },
-                            },
-                            'required': ['subject', ],
                         },
                     },
                 },
+
                 'not_parsed_events': {
                     'type': 'object',
                     'properties': {
-                        'file': {
+
+                        'subscribers': {
                             'type': 'object',
                             'properties': {
-                                'path': {
-                                    'type': 'string',
+
+                                'file': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'args': {
+                                            'type': 'object',
+                                            'properties': {
+                                                'path': {
+                                                    'type': 'string',
+                                                },
+                                            },
+                                            'required': ['path', ],
+                                        },
+                                    },
+                                    'required': ['args', ],
+                                },
+
+                                'nats': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'args': {
+                                            'type': 'object',
+                                            'properties': {
+                                                'subject': {
+                                                    'type': 'string',
+                                                },
+                                            },
+                                            'required': ['subject', ],
+                                        },
+                                    },
+                                    'required': ['args', ],
                                 },
                             },
-                            'required': ['path', ],
-                        },
-                        'nats': {
-                            'type': 'object',
-                            'properties': {
-                                'subject': {
-                                    'type': 'string',
-                                },
-                            },
-                            'required': ['subject', ],
                         },
                     },
                 },
+
+                'radar': {
+                    'type': 'object',
+                    'properties': {
+
+                        'request_timeout': {
+                            'type': 'number',
+                        },
+                        'subscribers': {
+                            'type': 'object',
+                            'properties': {
+
+                                'file': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'args': {
+                                            'type': 'object',
+                                            'properties': {
+                                                'path': {
+                                                    'type': 'string',
+                                                },
+                                            },
+                                            'required': ['path', ],
+                                        },
+                                        'subscription_options': {
+                                            'type': 'object',
+                                            'properties': {
+                                                'subscription_options': {
+                                                    'type': 'integer',
+                                                },
+                                            },
+                                        },
+                                    },
+                                    'required': ['args', ],
+                                },
+
+                                'nats': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'args': {
+                                            'type': 'object',
+                                            'properties': {
+                                                'subject': {
+                                                    'type': 'string',
+                                                },
+                                            },
+                                            'required': ['subject', ],
+                                        },
+                                        'subscription_options': {
+                                            'type': 'object',
+                                            'properties': {
+                                                'subscription_options': {
+                                                    'type': 'integer',
+                                                },
+                                            },
+                                        },
+                                    },
+                                    'required': ['args', ],
+                                },
+                            },
+                        },
+                    },
+                },
+
             },
         },
     },
-    'required': ['ds', 'wine_bin_path', 'state', ],
+    'required': ['wine_bin_path', 'state', 'ds', ],
 }
 
 
 CONFIG_DEFAULTS = {
+    'wine_bin_path': 'wine',
+    'state': {
+        'file_path': 'airbridge.state',
+    },
     'logging': {
         'trace': False,
         'files': {
@@ -302,10 +433,6 @@ CONFIG_DEFAULTS = {
             'encoding': 'utf8',
             'use_local_time': False,
         },
-    },
-    'wine_bin_path': 'wine',
-    'state': {
-        'file_path': 'airbridge.state',
     },
 }
 

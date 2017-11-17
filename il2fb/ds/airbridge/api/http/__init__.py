@@ -15,6 +15,7 @@ from il2fb.ds.airbridge.radar import Radar
 from il2fb.ds.airbridge.streaming.facilities import ChatStreamingFacility
 from il2fb.ds.airbridge.streaming.facilities import EventsStreamingFacility
 from il2fb.ds.airbridge.streaming.facilities import NotParsedStringsStreamingFacility
+from il2fb.ds.airbridge.streaming.facilities import RadarStreamingFacility
 
 from il2fb.ds.airbridge.api.http.constants import ACCESS_LOG_FORMAT
 from il2fb.ds.airbridge.api.http.routes import setup_routes
@@ -29,6 +30,7 @@ def build_http_api(
     chat: ChatStreamingFacility,
     events: EventsStreamingFacility,
     not_parsed_strings: NotParsedStringsStreamingFacility,
+    radar_stream: RadarStreamingFacility,
     mission_parser: MissionParser,
     config: Optional[dict]=None,
     **kwargs
@@ -45,11 +47,13 @@ def build_http_api(
     app['dedicated_server'] = dedicated_server
     app['console_client'] = console_client
     app['radar'] = radar
+    app['mission_parser'] = mission_parser
+    app['config'] = config if config is not None else {}
+
     app['chat'] = chat
     app['events'] = events
     app['not_parsed_strings'] = not_parsed_strings
-    app['mission_parser'] = mission_parser
-    app['config'] = config if config is not None else {}
+    app['radar_stream'] = radar_stream
 
     setup_routes(app.router)
     setup_cors(app)
