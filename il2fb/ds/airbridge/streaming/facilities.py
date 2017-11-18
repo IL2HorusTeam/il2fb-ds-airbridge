@@ -50,16 +50,16 @@ class StreamingFacility(metaclass=abc.ABCMeta):
     async def _try_run(self) -> Awaitable[None]:
         try:
             LOG.info(
-                f"streaming facility '{self._name}' was started"
+                f"streaming facility '{self._name}': started"
             )
             await self._run()
         except Exception:
             LOG.exception(
-                f"streaming facility '{self._name}' was terminated"
+                f"streaming facility '{self._name}': terminated"
             )
         else:
             LOG.info(
-                f"streaming facility '{self._name}' was stopped"
+                f"streaming facility '{self._name}': stopped"
             )
 
     @abc.abstractmethod
@@ -117,7 +117,7 @@ class QueueStreamingFacility(StreamingFacility):
             with await self._subscribers_lock:
                 if not self._subscribers:
                     LOG.debug(
-                        f"streaming facility '{self._name}' has got item, but "
+                        f"streaming facility '{self._name}': got item, but "
                         f"no subscribers were found, skip (item={repr(item)})"
                     )
                     continue
@@ -130,12 +130,12 @@ class QueueStreamingFacility(StreamingFacility):
                     await asyncio.gather(*awaitables, loop=self._loop)
                 except:
                     LOG.exception(
-                        f"failed to handle streaming item "
-                        f"(facility='{self._name}', item={repr(item)})"
+                        f"streaming facility '{self._name}': failed to handle "
+                        f"item (item={repr(item)})"
                     )
 
     def stop(self) -> None:
-        LOG.debug(f"ask streaming facility '{self._name}' to stop")
+        LOG.debug(f"streaming facility '{self._name}': asked to stop")
 
         if self._main_task:
             self._queue.put_nowait(None)
@@ -309,7 +309,7 @@ class RadarStreamingFacility(StreamingFacility):
                 group.append(subscriber)
 
             if not self._resume_event.is_set():
-                LOG.debug(f"resume streaming facility '{self._name}'")
+                LOG.debug(f"streaming facility '{self._name}': resume")
                 self._resume_event.set()
 
     async def unsubscribe(self, subscriber: StreamingSubscriber) -> Awaitable[None]:
@@ -326,7 +326,7 @@ class RadarStreamingFacility(StreamingFacility):
                     if self._subscribers:
                         await self._maybe_set_new_tick_period()
                     else:
-                        LOG.debug(f"pause streaming facility '{self._name}'")
+                        LOG.debug(f"streaming facility '{self._name}': pause ")
                         self._resume_event.clear()
 
                         if self._tick_task:
@@ -343,8 +343,8 @@ class RadarStreamingFacility(StreamingFacility):
         with await self._tick_period_lock:
             if self._tick_period != tick_period:
                 LOG.debug(
-                    f"set new tick period for streaming facility "
-                    f"'{self._name}' (tick_period={tick_period})"
+                    f"streaming facility '{self._name}': set new tick period "
+                    f"(tick_period={tick_period})"
                 )
                 self._tick_period = tick_period
 
@@ -368,7 +368,7 @@ class RadarStreamingFacility(StreamingFacility):
                 await self._tick_task
             except CancelledError:
                 LOG.debug(
-                    f"tick task for streaming facility '{self._name}' "
+                    f"streaming facility '{self._name}': tick task "
                     f"was cancelled"
                 )
             finally:
@@ -400,13 +400,13 @@ class RadarStreamingFacility(StreamingFacility):
                 data = await self._refresh_task
             except CancelledError:
                 LOG.debug(
-                    f"refresh task for streaming facility '{self._name}' "
+                    f"streaming facility '{self._name}': refresh task "
                     f"was cancelled"
                 )
             except ConnectionAbortedError:
                 LOG.debug(
-                    f"streaming facility '{self._name}' has lost connection "
-                    "with radar"
+                    f"streaming facility '{self._name}': connection with radar"
+                    f"was lost"
                 )
                 break
             finally:
@@ -440,14 +440,14 @@ class RadarStreamingFacility(StreamingFacility):
                         await asyncio.gather(*awaitables, loop=self._loop)
                     except:
                         LOG.exception(
-                            f"failed to handle item of streaming facility "
-                            f"'{self._name}' (item={repr(item)})"
+                            f"streaming facility '{self._name}': failed to "
+                            f"handle item (item={repr(item)})"
                         )
                     else:
                         group.ack_refresh(now)
 
     def stop(self) -> None:
-        LOG.debug(f"ask streaming facility '{self._name}' to stop")
+        LOG.debug(f"streaming facility '{self._name}': asked to stop")
 
         self._do_stop = True
         self._resume_event.set()
