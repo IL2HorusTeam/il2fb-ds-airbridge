@@ -283,52 +283,44 @@ class Airbridge:
                 config.bind.port,
             )
 
-    def stop(self) -> None:
-        self._maybe_stop_proxies()
+    async def stop(self) -> Awaitable[None]:
+        await self._maybe_stop_proxies()
         self._game_log_watch_dog.stop()
-
-    def _maybe_stop_proxies(self) -> None:
-        if self._console_client_proxy:
-            self._console_client_proxy.stop()
-
-        if self._device_link_client_proxy:
-            self._device_link_client_proxy.stop()
-
-    async def wait_stopped(self) -> Awaitable[None]:
-        await self._maybe_wait_api_stopped()
-        await self._maybe_wait_proxies()
+        await self._maybe_stop_api()
         self._maybe_stop_game_log_processing()
         await self._stop_streaming_facilities()
         await self._maybe_stop_static_streaming_subscribers()
         await self._maybe_stop_nats_clients()
 
-    async def _maybe_wait_api_stopped(self) -> Awaitable[None]:
-        await self._maybe_wait_nats_api_stopped()
-        await self._maybe_wait_http_api_stopped()
+    async def _maybe_stop_proxies(self) -> None:
+        awaitables = []
 
-    async def _maybe_wait_nats_api_stopped(self) -> Awaitable[None]:
+        if self._console_client_proxy:
+            self._console_client_proxy.stop()
+            awaitables.append(self._console_client_proxy.wait_stopped())
+
+        if self._device_link_client_proxy:
+            self._device_link_client_proxy.stop()
+            awaitables.append(self._device_link_client_proxy.wait_stopped())
+
+        if awaitables:
+            await asyncio.gather(*awaitables, loop=self.loop)
+
+    async def _maybe_stop_api(self) -> Awaitable[None]:
+        await self._maybe_stop_nats_api()
+        await self._maybe_stop_http_api()
+
+    async def _maybe_stop_nats_api(self) -> Awaitable[None]:
         if self._nats_api:
             await self._nats_api.stop()
 
-    async def _maybe_wait_http_api_stopped(self) -> Awaitable[None]:
+    async def _maybe_stop_http_api(self) -> Awaitable[None]:
         if self._http_api_server:
             self._http_api_server.close()
             await self._http_api_server.wait_closed()
             await self._http_api.shutdown()
             await self._http_api_handler.shutdown(60.0)
             await self._http_api.cleanup()
-
-    async def _maybe_wait_proxies(self) -> Awaitable[None]:
-        awaitables = []
-
-        if self._console_client_proxy:
-            awaitables.append(self._console_client_proxy.wait_stopped())
-
-        if self._device_link_client_proxy:
-            awaitables.append(self._device_link_client_proxy.wait_stopped())
-
-        if awaitables:
-            await asyncio.gather(*awaitables, loop=self.loop)
 
     def _maybe_stop_game_log_processing(self) -> None:
         if self._game_log_watch_dog_thread:

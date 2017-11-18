@@ -168,16 +168,16 @@ def run_app(
         LOG.info("application stop was requested")
         error_ack()
     finally:
-        app.stop()
         console_client.close()
         device_link_client.close()
 
         loop.run_until_complete(asyncio.gather(
-            app.wait_stopped(),
             console_client.wait_closed(),
             device_link_client.wait_closed(),
             loop=loop,
         ))
+
+        loop.run_until_complete(app.stop())
 
 
 def run_main(config: ServerConfig, state: DotAccessDict, trace: bool) -> None:
