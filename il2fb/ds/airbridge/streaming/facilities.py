@@ -326,8 +326,11 @@ class RadarStreamingFacility(StreamingFacility):
                     if self._subscribers:
                         await self._maybe_set_new_tick_period()
                     else:
-                        LOG.debug(f"streaming facility '{self._name}': pause ")
-                        self._resume_event.clear()
+                        if not self._do_stop:
+                            LOG.debug(
+                                f"streaming facility '{self._name}': pause"
+                            )
+                            self._resume_event.clear()
 
                         if self._tick_task:
                             self._tick_task.cancel()
