@@ -397,7 +397,7 @@ class RadarStreamingFacility(StreamingFacility):
                     coroutine,
                     loop=self._loop,
                 )
-                result = await self._refresh_task
+                data = await self._refresh_task
             except CancelledError:
                 LOG.debug(
                     f"refresh task for streaming facility '{self._name}' "
@@ -421,9 +421,13 @@ class RadarStreamingFacility(StreamingFacility):
                 else:
                     continue
 
-            # TODO: skip, if empty
+            if data.is_empty:
+                LOG.debug(
+                    f"streaming facility '{self._name}': empty data, skip"
+                )
+                continue
 
-            item = TimestampedData(result)
+            item = TimestampedData(data)
             now = time.monotonic()
 
             for group in self._subscribers.values():

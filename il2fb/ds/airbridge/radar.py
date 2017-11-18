@@ -5,6 +5,8 @@ import time
 
 from typing import Awaitable, List
 
+from il2fb.commons.structures import BaseStructure
+
 from il2fb.ds.middleware.device_link.client import DeviceLinkClient
 from il2fb.ds.middleware.device_link import structures
 
@@ -12,7 +14,15 @@ from il2fb.ds.middleware.device_link import structures
 LOG = logging.getLogger(__name__)
 
 
-class AllMovingActorsPositions(dict):
+class CompoundActorsPositions(BaseStructure):
+
+    @property
+    def is_empty(self):
+        return not any((getattr(self, name) for name in self.__slots__))
+
+
+class AllMovingActorsPositions(CompoundActorsPositions):
+    __slots__ = ['aircrafts', 'ground_units', 'ships', ]
 
     def __init__(
         self,
@@ -20,14 +30,13 @@ class AllMovingActorsPositions(dict):
         ground_units: List[structures.MovingGroundUnitPosition],
         ships: List[structures.ShipPosition],
     ):
-        super().__init__(
-            aircrafts=aircrafts,
-            ground_units=ground_units,
-            ships=ships,
-        )
+        self.aircrafts = aircrafts
+        self.ground_units = ground_units
+        self.ships = ships
 
 
-class AllStationaryActorsPositions(dict):
+class AllStationaryActorsPositions(CompoundActorsPositions):
+    __slots__ = ['stationary_objects', 'houses', 'ships', ]
 
     def __init__(
         self,
@@ -35,11 +44,9 @@ class AllStationaryActorsPositions(dict):
         houses: List[structures.HousePosition],
         ships: List[structures.ShipPosition],
     ):
-        super().__init__(
-            stationary_objects=stationary_objects,
-            houses=houses,
-            ships=ships,
-        )
+        self.stationary_objects = stationary_objects
+        self.houses = houses
+        self.ships = ships
 
 
 class Radar:
