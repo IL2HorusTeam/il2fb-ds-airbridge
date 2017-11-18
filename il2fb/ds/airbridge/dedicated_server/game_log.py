@@ -6,12 +6,23 @@ import threading
 from typing import Callable
 
 from il2fb.commons.events import Event, EventParsingException
+from il2fb.commons.structures import BaseStructure
 
 from il2fb.ds.airbridge.typing import EventHandler
 from il2fb.ds.airbridge.typing import StringOrNoneProducer, StringHandler
 
 
 LOG = logging.getLogger(__name__)
+
+
+class NotParsedGameLogString(BaseStructure):
+    __slots__ = ['value', ]
+
+    def __init__(self, value: str):
+        self.value = value
+
+    def __repr__(self) -> str:
+        return f"<NotParsedGameLogString(value='{self.value}')>"
 
 
 class GameLogWorker:
@@ -80,7 +91,7 @@ class GameLogWorker:
             except EventParsingException:
                 self._handle_not_parsed_string(string)
             except Exception:
-                LOG.exception(f"failed to parse game log string `{string}`")
+                LOG.exception(f"failed to parse game log string (s={string})")
 
     def _handle_event(self, event: Event) -> None:
         with self._events_subscribers_lock:
@@ -94,12 +105,14 @@ class GameLogWorker:
                     )
 
     def _handle_not_parsed_string(self, s: str) -> None:
+        item = NotParsedGameLogString(value=s)
+
         with self._not_parsed_strings_subscribers_lock:
             for subscriber in self._not_parsed_strings_subscribers:
                 try:
-                    subscriber(s)
+                    subscriber(item)
                 except Exception:
                     LOG.exception(
                         f"subscriber {subscriber} failed to handle not parsed "
-                        f"game log string `{s}`"
+                        f"game log string (item={repr(item)})"
                     )

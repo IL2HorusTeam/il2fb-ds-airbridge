@@ -20,6 +20,7 @@ from il2fb.ds.middleware.console.events import ChatMessageWasReceived
 from il2fb.parsers.game_log import events as game_log_events
 
 from il2fb.ds.airbridge.dedicated_server.game_log import GameLogWorker
+from il2fb.ds.airbridge.dedicated_server.game_log import NotParsedGameLogString
 from il2fb.ds.airbridge.radar import Radar
 from il2fb.ds.airbridge.structures import TimestampedData
 from il2fb.ds.airbridge.streaming.subscribers.base import StreamingSubscriber
@@ -237,8 +238,8 @@ class NotParsedStringsStreamingFacility(QueueStreamingFacility):
             subscriber=self._consume,
         )
 
-    def _consume(self, s: str) -> None:
-        item = TimestampedData(s)
+    def _consume(self, item: NotParsedGameLogString) -> None:
+        item = TimestampedData(item)
         self._queue.put_nowait(item)
 
 
