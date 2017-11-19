@@ -5,11 +5,13 @@ import logging
 from il2fb.ds.airbridge.api.http.responses.rest import RESTBadRequest
 from il2fb.ds.airbridge.api.http.responses.rest import RESTInternalServerError
 from il2fb.ds.airbridge.api.http.responses.rest import RESTSuccess
+from il2fb.ds.airbridge.api.http.security import with_authorization
 
 
 LOG = logging.getLogger(__name__)
 
 
+@with_authorization
 async def get_humans_list(request):
     pretty = 'pretty' in request.query
     timeout = request.query.get('timeout')
@@ -36,6 +38,7 @@ async def get_humans_list(request):
         return RESTSuccess(payload=items, pretty=pretty)
 
 
+@with_authorization
 async def get_humans_count(request):
     pretty = 'pretty' in request.query
     timeout = request.query.get('timeout')
@@ -62,6 +65,7 @@ async def get_humans_count(request):
         return RESTSuccess(payload=result, pretty=pretty)
 
 
+@with_authorization
 async def get_humans_statistics(request):
     pretty = 'pretty' in request.query
     timeout = request.query.get('timeout')
@@ -92,6 +96,7 @@ async def get_humans_statistics(request):
         return RESTSuccess(payload=items, pretty=pretty)
 
 
+@with_authorization
 async def kick_all_humans(request):
     pretty = 'pretty' in request.query
     timeout = request.query.get('timeout')
@@ -118,6 +123,7 @@ async def kick_all_humans(request):
         return RESTSuccess(pretty=pretty)
 
 
+@with_authorization
 async def kick_human_by_callsign(request):
     pretty = 'pretty' in request.query
     timeout = request.query.get('timeout')

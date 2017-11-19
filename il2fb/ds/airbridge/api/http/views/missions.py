@@ -11,11 +11,13 @@ from il2fb.ds.airbridge.api.http.responses.rest import RESTBadRequest
 from il2fb.ds.airbridge.api.http.responses.rest import RESTInternalServerError
 from il2fb.ds.airbridge.api.http.responses.rest import RESTNotFound
 from il2fb.ds.airbridge.api.http.responses.rest import RESTSuccess
+from il2fb.ds.airbridge.api.http.security import with_authorization
 
 
 LOG = logging.getLogger(__name__)
 
 
+@with_authorization
 async def browse_missions(request):
     pretty = 'pretty' in request.query
     root_dir = request.app['dedicated_server'].missions_dir
@@ -63,6 +65,7 @@ async def browse_missions(request):
         return RESTSuccess(payload=result, pretty=pretty)
 
 
+@with_authorization
 async def get_mission(request):
     pretty = 'pretty' in request.query
     as_json = 'json' in request.query
@@ -97,6 +100,7 @@ async def get_mission(request):
         return FileResponse(absolute_path)
 
 
+@with_authorization
 async def upload_mission(request):
     pretty = 'pretty' in request.query
     root_dir = request.app['dedicated_server'].missions_dir
@@ -157,6 +161,7 @@ async def upload_mission(request):
         return RESTSuccess(pretty=pretty)
 
 
+@with_authorization
 async def delete_mission(request):
     pretty = 'pretty' in request.query
     root_dir = request.app['dedicated_server'].missions_dir
@@ -193,6 +198,7 @@ async def delete_mission(request):
         return RESTSuccess(pretty=pretty)
 
 
+@with_authorization
 async def load_mission(request):
     pretty = 'pretty' in request.query
     timeout = request.query.get('timeout')
@@ -230,6 +236,7 @@ async def load_mission(request):
         return RESTSuccess(pretty=pretty)
 
 
+@with_authorization
 async def get_current_mission_info(request):
     pretty = 'pretty' in request.query
     timeout = request.query.get('timeout')
@@ -258,6 +265,7 @@ async def get_current_mission_info(request):
         return RESTSuccess(payload=result, pretty=pretty)
 
 
+@with_authorization
 async def begin_current_mission(request):
     pretty = 'pretty' in request.query
     timeout = request.query.get('timeout')
@@ -286,6 +294,7 @@ async def begin_current_mission(request):
         return RESTSuccess(pretty=pretty)
 
 
+@with_authorization
 async def end_current_mission(request):
     pretty = 'pretty' in request.query
     timeout = request.query.get('timeout')
@@ -314,6 +323,7 @@ async def end_current_mission(request):
         return RESTSuccess(pretty=pretty)
 
 
+@with_authorization
 async def unload_current_mission(request):
     pretty = 'pretty' in request.query
     timeout = request.query.get('timeout')

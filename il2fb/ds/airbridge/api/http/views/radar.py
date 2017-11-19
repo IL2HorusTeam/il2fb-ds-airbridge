@@ -5,11 +5,13 @@ import logging
 from il2fb.ds.airbridge.api.http.responses.rest import RESTBadRequest
 from il2fb.ds.airbridge.api.http.responses.rest import RESTInternalServerError
 from il2fb.ds.airbridge.api.http.responses.rest import RESTSuccess
+from il2fb.ds.airbridge.api.http.security import with_authorization
 
 
 LOG = logging.getLogger(__name__)
 
 
+@with_authorization
 async def get_all_ships_positions(request):
     pretty = 'pretty' in request.query
     timeout = request.query.get('timeout')
@@ -38,6 +40,7 @@ async def get_all_ships_positions(request):
         return RESTSuccess(payload=result, pretty=pretty)
 
 
+@with_authorization
 async def get_moving_ships_positions(request):
     pretty = 'pretty' in request.query
     timeout = request.query.get('timeout')
@@ -66,6 +69,7 @@ async def get_moving_ships_positions(request):
         return RESTSuccess(payload=result, pretty=pretty)
 
 
+@with_authorization
 async def get_stationary_ships_positions(request):
     pretty = 'pretty' in request.query
     timeout = request.query.get('timeout')
@@ -97,6 +101,7 @@ async def get_stationary_ships_positions(request):
         return RESTSuccess(payload=result, pretty=pretty)
 
 
+@with_authorization
 async def get_moving_aircrafts_positions(request):
     pretty = 'pretty' in request.query
     timeout = request.query.get('timeout')
@@ -128,6 +133,7 @@ async def get_moving_aircrafts_positions(request):
         return RESTSuccess(payload=result, pretty=pretty)
 
 
+@with_authorization
 async def get_moving_ground_units_positions(request):
     pretty = 'pretty' in request.query
     timeout = request.query.get('timeout')
@@ -159,6 +165,7 @@ async def get_moving_ground_units_positions(request):
         return RESTSuccess(payload=result, pretty=pretty)
 
 
+@with_authorization
 async def get_all_houses_positions(request):
     pretty = 'pretty' in request.query
     timeout = request.query.get('timeout')
@@ -187,6 +194,7 @@ async def get_all_houses_positions(request):
         return RESTSuccess(payload=result, pretty=pretty)
 
 
+@with_authorization
 async def get_stationary_objects_positions(request):
     pretty = 'pretty' in request.query
     timeout = request.query.get('timeout')
@@ -218,6 +226,7 @@ async def get_stationary_objects_positions(request):
         return RESTSuccess(payload=result, pretty=pretty)
 
 
+@with_authorization
 async def get_all_moving_actors_positions(request):
     pretty = 'pretty' in request.query
     timeout = request.query.get('timeout')
@@ -249,6 +258,7 @@ async def get_all_moving_actors_positions(request):
         return RESTSuccess(payload=result, pretty=pretty)
 
 
+@with_authorization
 async def get_all_stationary_actors_positions(request):
     pretty = 'pretty' in request.query
     timeout = request.query.get('timeout')

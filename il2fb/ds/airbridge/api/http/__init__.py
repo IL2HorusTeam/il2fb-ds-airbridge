@@ -19,6 +19,8 @@ from il2fb.ds.airbridge.streaming.facilities import RadarStreamingFacility
 
 from il2fb.ds.airbridge.api.http.constants import ACCESS_LOG_FORMAT
 from il2fb.ds.airbridge.api.http.routes import setup_routes
+from il2fb.ds.airbridge.api.http.security import AuthorizationBackend
+from il2fb.ds.airbridge.api.http.security import setup_authorization
 from il2fb.ds.airbridge.api.http.security import setup_cors
 
 
@@ -32,6 +34,7 @@ def build_http_api(
     not_parsed_strings_stream: NotParsedStringsStreamingFacility,
     radar_stream: RadarStreamingFacility,
     mission_parser: MissionParser,
+    authorization_backend: Optional[AuthorizationBackend]=None,
     config: Optional[dict]=None,
     **kwargs
 ):
@@ -44,11 +47,12 @@ def build_http_api(
         **kwargs,
     )
 
+    app['config'] = config if config is not None else {}
+
     app['dedicated_server'] = dedicated_server
     app['console_client'] = console_client
     app['radar'] = radar
     app['mission_parser'] = mission_parser
-    app['config'] = config if config is not None else {}
 
     app['chat_stream'] = chat_stream
     app['events_stream'] = events_stream
@@ -57,5 +61,8 @@ def build_http_api(
 
     setup_routes(app.router)
     setup_cors(app)
+
+    if authorization_backend:
+        setup_authorization(app, authorization_backend)
 
     return app

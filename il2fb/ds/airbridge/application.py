@@ -22,6 +22,7 @@ from il2fb.ds.airbridge.dedicated_server.instance import DedicatedServer
 from il2fb.ds.airbridge.dedicated_server.game_log import GameLogWorker
 
 from il2fb.ds.airbridge.api.http import build_http_api
+from il2fb.ds.airbridge.api.http.security import AuthorizationBackend
 from il2fb.ds.airbridge.api.nats import NATSSubscriber
 
 from il2fb.ds.airbridge.nats import NATSClient
@@ -258,30 +259,43 @@ class Airbridge:
 
     async def _maybe_start_http_api(self) -> Awaitable[None]:
         config = self._config.api.http
-        if config:
-            self._http_api = build_http_api(
-                loop=self.loop,
-                dedicated_server=self.dedicated_server,
-                console_client=self.console_client,
-                radar=self.radar,
-                chat_stream=self.chat_stream,
-                events_stream=self.events_stream,
-                not_parsed_strings_stream=self.not_parsed_strings_stream,
-                radar_stream=self.radar_stream,
-                mission_parser=self._mission_parser,
-                config=dict(
-                    cors=config.cors,
-                ),
-                debug=self._trace,
+
+        if not config:
+            return
+
+        api_options = dict(
+            loop=self.loop,
+            dedicated_server=self.dedicated_server,
+            console_client=self.console_client,
+            radar=self.radar,
+            chat_stream=self.chat_stream,
+            events_stream=self.events_stream,
+            not_parsed_strings_stream=self.not_parsed_strings_stream,
+            radar_stream=self.radar_stream,
+            mission_parser=self._mission_parser,
+            config=dict(
+                cors=config.cors,
+            ),
+            debug=self._trace,
+        )
+
+        auth_options = config.auth
+        if auth_options:
+            backend = AuthorizationBackend(
+                token_storage_path=auth_options.token_storage_path,
+                token_header_name=auth_options.get('token_header_name')
             )
-            self._http_api_handler = self._http_api.make_handler(
-                loop=self.loop,
-            )
-            self._http_api_server = await self.loop.create_server(
-                self._http_api_handler,
-                config.bind.address or "localhost",
-                config.bind.port,
-            )
+            api_options['authorization_backend'] = backend
+
+        self._http_api = build_http_api(**api_options)
+        self._http_api_handler = self._http_api.make_handler(
+            loop=self.loop,
+        )
+        self._http_api_server = await self.loop.create_server(
+            self._http_api_handler,
+            config.bind.address or "localhost",
+            config.bind.port,
+        )
 
     async def stop(self) -> Awaitable[None]:
         await self._maybe_stop_proxies()

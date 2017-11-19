@@ -9,11 +9,13 @@ from il2fb.ds.airbridge import json
 from il2fb.ds.airbridge.api.http.responses.rest import RESTBadRequest
 from il2fb.ds.airbridge.api.http.responses.rest import RESTInternalServerError
 from il2fb.ds.airbridge.api.http.responses.rest import RESTSuccess
+from il2fb.ds.airbridge.api.http.security import with_authorization
 
 
 LOG = logging.getLogger(__name__)
 
 
+@with_authorization
 async def chat_to_all(request):
     pretty = 'pretty' in request.query
     timeout = request.query.get('timeout')
@@ -46,6 +48,7 @@ async def chat_to_all(request):
         return RESTSuccess(pretty=pretty)
 
 
+@with_authorization
 async def chat_to_human(request):
     pretty = 'pretty' in request.query
     timeout = request.query.get('timeout')
@@ -80,6 +83,7 @@ async def chat_to_human(request):
         return RESTSuccess(pretty=pretty)
 
 
+@with_authorization
 async def chat_to_belligerent(request):
     pretty = 'pretty' in request.query
     timeout = request.query.get('timeout')

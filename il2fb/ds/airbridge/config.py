@@ -128,6 +128,18 @@ CONFIG_SCHEMA = {
                             },
                             'required': ['port', ],
                         },
+                        'auth': {
+                            'type': 'object',
+                            'properties': {
+                                'token_storage_path': {
+                                    'format': 'string',
+                                },
+                                'address': {
+                                    'token_header_name': 'string',
+                                },
+                            },
+                            'required': ['token_storage_path', ],
+                        },
                         'cors': {
                             'type': 'object',
                         },

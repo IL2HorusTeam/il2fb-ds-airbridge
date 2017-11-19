@@ -9,6 +9,7 @@ from aiohttp import web, WSMsgType
 
 from il2fb.ds.airbridge import json
 from il2fb.ds.airbridge.api.http.responses.ws import WSSuccess, WSFailure
+from il2fb.ds.airbridge.api.http.security import with_authorization
 from il2fb.ds.airbridge.streaming.subscribers.base import StreamingSubscriber
 
 
@@ -56,6 +57,7 @@ class StreamingView(StreamingSubscriber, web.View):
             STREAMING_OPCODE.UNSUBSCRIBE_FROM_RADAR: self._unsubscribe_from_radar,
         }
 
+    @with_authorization
     async def get(self):
         LOG.debug("ws streaming connection was established")
 
