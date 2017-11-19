@@ -20,10 +20,10 @@ Provides high-level API and facilities.
    :target: https://codeclimate.com/github/IL2HorusTeam/il2fb-ds-airbridge
    :alt: Code quality provided by «Code Climate»
 
-.. |codacy| image:: https://api.codacy.com/project/badge/Grade/06e99f9bd40b43d8b95565a900654578?branch=dev
+.. |codacy| image:: https://api.codacy.com/project/badge/Grade/06e99f9bd40b43d8b95565a900654578?branch=master
    :target: https://www.codacy.com/app/oblalex/il2fb-ds-airbridge
    :alt: Code quality provided by «Codacy»
 
-.. |scrutinizer| image:: https://scrutinizer-ci.com/g/IL2HorusTeam/il2fb-ds-airbridge/badges/quality-score.png?b=dev&style=flat
-   :target: https://scrutinizer-ci.com/g/IL2HorusTeam/il2fb-ds-airbridge/?branch=dev
+.. |scrutinizer| image:: https://scrutinizer-ci.com/g/IL2HorusTeam/il2fb-ds-airbridge/badges/quality-score.png?b=master&style=flat
+   :target: https://scrutinizer-ci.com/g/IL2HorusTeam/il2fb-ds-airbridge/?branch=master
    :alt: Code quality provided by «Scrutinizer CI»
