@@ -35,7 +35,7 @@ def build_http_api(
     radar_stream: RadarStreamingFacility,
     mission_parser: MissionParser,
     authorization_backend: Optional[AuthorizationBackend]=None,
-    config: Optional[dict]=None,
+    cors_options: Optional[dict]=None,
     **kwargs
 ):
 
@@ -46,8 +46,6 @@ def build_http_api(
         ),
         **kwargs,
     )
-
-    app['config'] = config if config is not None else {}
 
     app['dedicated_server'] = dedicated_server
     app['console_client'] = console_client
@@ -60,9 +58,7 @@ def build_http_api(
     app['radar_stream'] = radar_stream
 
     setup_routes(app.router)
-    setup_cors(app)
-
-    if authorization_backend:
-        setup_authorization(app, authorization_backend)
+    setup_cors(app, cors_options or {})
+    setup_authorization(app, authorization_backend)
 
     return app

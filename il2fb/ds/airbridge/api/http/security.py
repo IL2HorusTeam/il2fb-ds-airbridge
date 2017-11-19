@@ -12,10 +12,10 @@ from il2fb.ds.airbridge.api.http.constants import DEFAULT_AUTH_TOKEN_HEADER_NAME
 from il2fb.ds.airbridge.typing import StringOrPath
 
 
-def setup_cors(app: web.Application) -> None:
+def setup_cors(app: web.Application, options: dict) -> None:
     defaults = {
         key: aiohttp_cors.ResourceOptions(**value)
-        for key, value in app['config']['cors'].items()
+        for key, value in options.items()
     }
     cors = aiohttp_cors.setup(app, defaults=defaults)
 

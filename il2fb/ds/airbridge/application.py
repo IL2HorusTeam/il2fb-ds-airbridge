@@ -273,9 +273,7 @@ class Airbridge:
             not_parsed_strings_stream=self.not_parsed_strings_stream,
             radar_stream=self.radar_stream,
             mission_parser=self._mission_parser,
-            config=dict(
-                cors=config.cors,
-            ),
+            cors_options=config.cors,
             debug=self._trace,
         )
 
