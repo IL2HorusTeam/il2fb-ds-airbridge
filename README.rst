@@ -34,7 +34,7 @@ Architecture Overview
 
 // TODO:
 
-.. image:: ./docs/Overview.svg
+.. image:: ./docs/Overview.png
     :alt: Minic screenshots
     :align: center
 
