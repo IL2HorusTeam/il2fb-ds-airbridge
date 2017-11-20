@@ -6,7 +6,82 @@ IL-2 FB Dedicated Server Middleware Airbridge
 
 Wrapper of dedicated server of «IL-2 Sturmovik: Forgotten Battles».
 
+
+**Table of Contents**
+
+.. contents::
+    :local:
+    :depth: 1
+    :backlinks: none
+
+
+Synopsis
+--------
+
 Provides high-level API and facilities.
+
+// TODO:
+
+
+Premises
+--------
+
+// TODO:
+
+
+Architecture Overview
+---------------------
+
+// TODO:
+
+.. image:: ./docs/Overview.svg
+    :alt: Minic screenshots
+    :align: center
+
+// TODO:
+
+
+Features Overview
+-----------------
+
+// TODO:
+
+
+Installation
+------------
+
+// TODO:
+
+
+Configuration
+-------------
+
+// TODO:
+
+
+Usage
+-----
+
+// TODO:
+
+
+Caveats
+-------
+
+// TODO:
+
+
+FAQ
+---
+
+// TODO:
+
+
+Changelog
+---------
+
+
+// TODO:
 
 
 .. |python_versions| image:: https://img.shields.io/badge/Python-3.6-brightgreen.svg?style=flat
