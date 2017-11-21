@@ -1,7 +1,7 @@
 IL-2 FB Dedicated Server Middleware Airbridge
 =============================================
 
-|python_versions| |license| |code_climate| |codacy| |scrutinizer|
+|python_versions| |license| |code_climate| |codebeat| |codacy| |scrutinizer|
 
 
 Wrapper of dedicated server of «IL-2 Sturmovik: Forgotten Battles».
@@ -94,6 +94,10 @@ Changelog
 .. |code_climate| image:: https://codeclimate.com/github/IL2HorusTeam/il2fb-ds-airbridge/badges/gpa.svg
    :target: https://codeclimate.com/github/IL2HorusTeam/il2fb-ds-airbridge
    :alt: Code quality provided by «Code Climate»
+
+.. |codebeat| image:: https://codebeat.co/badges/82cf3629-2f6b-4a96-8585-c8241455b8e3
+    :target: https://codebeat.co/projects/github-com-il2horusteam-il2fb-ds-airbridge-master
+    :alt: Code quality provided by «Codebeat»
 
 .. |codacy| image:: https://api.codacy.com/project/badge/Grade/06e99f9bd40b43d8b95565a900654578?branch=master
    :target: https://www.codacy.com/app/oblalex/il2fb-ds-airbridge
