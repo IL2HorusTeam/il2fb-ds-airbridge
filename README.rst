@@ -197,7 +197,74 @@ understanding of its implementation and work principles.
    :alt: Architecture Overview
    :align: center
 
-// TODO:
+
+Airbridge application runs dedicated server in background as a coprocess. It
+captures server's STDOUT with STDIN and forwards it to own STDOUT with STDIN.
+STDIN of Airbridge is forwarded to server's STDIN. This allows to do analysis
+and filtering of terminal I/O, e.g. addition of colors for prompt and errors.
+From user's perspective there's no visible difference between work with bare
+server and work with Airbridge. This is good for compatibility reasons.
+
+Information about server's config is provided to Airbridge by
+`il2fb-ds-config <https://github.com/IL2HorusTeam/il2fb-ds-config>`_ library.
+Most important config options are related to console's and device link's ports
+and location of game log. Location of missions is always known and contained
+inside server's directory.
+
+Communication between Airbridge and dedicated server is provided by device link
+and console clients (see `il2fb-ds-middleware <https://github.com/IL2HorusTeam/il2fb-ds-middleware>`_ library).
+They allow to perform high-level requests as well as to send raw data. The
+latter one is used to build appropriate proxies on top of clients. Proxies
+allow existing applications to continue to communicate with server without
+changes. At the same time new applications can use unified API of Airbridge
+without any need to bother themselves with knowledge about low-level protocols.
+
+Device link on dedicated server can be used only to locate coordinates of
+actors and buildings. As location of objects is done by execution of multiple
+requests to server's device link, a ``radar`` is build on top of its client to
+simplify location of different types of objects.
+
+Game log of dedicated server is monitored by a game log watcher. If new records
+appear in game log, the watcher will read them and pass to a game log parser
+(see `il2fb-game-log-parser <https://github.com/IL2HorusTeam/il2fb-game-log-parser>`_ library).
+The parser emits structured representation of events. It also emits not parsed
+strings if it failes to parse them. This can be used to track parsing errors
+which can occur if a new or unknown event happens. Such events can be stored
+and used for improving parser.
+
+All features of dedicated server can be separated into two categories: queries
+and streaming. Queries are made via radar or console client. Streaming is a bit
+more compticated as events of a single logical facility can come from different
+physical souces (i.e. events mainly come from game log but can come from
+console client as well).
+
+There are four logical facilities which bring streaming to their subscribers:
+``chat``, ``events``, ``not parsed strings`` and ``radar``. The first three
+facilities act as routers between data sources and subscribers: ``chat``
+facility subscribes to chat messages from console client and broadcasts them to
+chat subscribers; ``events`` facility subscribes to game events from game log
+parser and to user connection events from console client and broadcasts events
+to events subscribers; ``not parsed strings`` facility subscribes to strings
+produced by game log parser and broadcasts them to own subscribers.
+In contrast, ``radar`` facility does not route data from other sources.
+Instead, it produces it by querying radar component periodically. Period of
+querying depends on the needs of its subscribers.
+
+Subscribers in terms of Airbridge are any objects who follow its subscription
+interface. Subscribers can be static and dynamic: static subscribers are
+created when application starts and work until it exits; dynamic subscribers
+can be created and destroyed at any moment. For example, it's possible to
+create a file streaming subscriber or NATS streaming subscriber which will work
+from application's startup till its end. Also it's possible to connect to
+Airbridge via WebSocket and subscribe to facilities dynamically.
+
+Clients of Airbridge can perform queries via different APIs depending on their
+needs. They can use Request-Reply API over NATS or REST API over HTTP.
+
+REST API combines two independent parts: API for dedicated server and API for
+missions storage. In fact, these APIs can be separated from each other and live
+their independent lives in different services (splitted into microservices),
+but this does not make sense at this point due to maintenance overhead.
 
 
 Features Overview
