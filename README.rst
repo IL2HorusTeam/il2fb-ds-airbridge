@@ -101,9 +101,8 @@ Changelog
 
 
 .. |logo| image:: ./docs/Logo.png
-    :alt: Architecture Overview
-    :align: center
-    :alt: Logo
+   :align: center
+   :alt: Logo
 
 .. |python_versions| image:: https://img.shields.io/badge/Python-3.6-brightgreen.svg?style=flat
    :alt: Supported versions of Python
