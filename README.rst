@@ -51,8 +51,8 @@ Architecture Overview
 // TODO:
 
 .. image:: ./docs/Overview.png
-    :alt: Architecture Overview
-    :align: center
+   :alt: Architecture Overview
+   :align: center
 
 // TODO:
 
@@ -101,7 +101,6 @@ Changelog
 
 
 .. |logo| image:: ./docs/Logo.png
-   :align: center
    :alt: Logo
 
 .. |python_versions| image:: https://img.shields.io/badge/Python-3.6-brightgreen.svg?style=flat
