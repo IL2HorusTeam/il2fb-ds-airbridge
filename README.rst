@@ -1,10 +1,9 @@
-IL-2 FB Dedicated Server Middleware Airbridge
-=============================================
+IL-2 FB Dedicated Server Airbridge
+===================================
 
 |python_versions| |license| |code_climate| |codebeat| |codacy| |scrutinizer|
 
-
-Wrapper of dedicated server of «IL-2 Sturmovik: Forgotten Battles».
+|logo|
 
 
 **Table of Contents**
@@ -18,9 +17,26 @@ Wrapper of dedicated server of «IL-2 Sturmovik: Forgotten Battles».
 Synopsis
 --------
 
-Provides high-level API and facilities.
+Airbridge is an application which wraps dedicated server of
+«IL-2 Sturmovik: Forgotten Battles» aviasimulator.
 
-// TODO:
+It acts as additional access layer on top of dedicated server and provides
+high-level API with ability to subscribe to game events. Airbridge makes it
+possible to communicate with dedicated server by exchanging structured messages
+instead of raw strings and packages.
+
+This means that you can access server's console, device link and mission
+storage in a unified way. Also it's possible to subscribe to the stream of
+parsed game events easily.
+
+Airbridge allows totally remote access to dedicated server without need to
+bother about access to server's file system. This allows to escape limitations
+on location of supplementary software and server commanders: dedicated server
+and 3rd-party software can now run on different machines and under different
+operating systems.
+
+All that brings much easier server's API and more pleasant development
+experience.
 
 
 Premises
@@ -35,7 +51,7 @@ Architecture Overview
 // TODO:
 
 .. image:: ./docs/Overview.png
-    :alt: Minic screenshots
+    :alt: Architecture Overview
     :align: center
 
 // TODO:
@@ -83,6 +99,11 @@ Changelog
 
 // TODO:
 
+
+.. |logo| image:: ./docs/Logo.png
+    :alt: Architecture Overview
+    :align: center
+    :alt: Logo
 
 .. |python_versions| image:: https://img.shields.io/badge/Python-3.6-brightgreen.svg?style=flat
    :alt: Supported versions of Python
