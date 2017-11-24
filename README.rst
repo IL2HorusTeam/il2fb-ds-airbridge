@@ -361,7 +361,19 @@ adding indents. This can be useful for debugging.
 
                     [
                         {
-                            // TODO
+                            "callsign": "john.doe",
+                            "ping": 15,
+                            "score": 0,
+                            "belligerent": {
+                                "name": "red",
+                                "value": 1,
+                                "verbose_name": "red",
+                                "help_text": null
+                            },
+                            "aircraft": {
+                                "designation": "* Red 1",
+                                "type": "Yak-1"
+                            },
                             "__type__": "il2fb.ds.middleware.console.structures.Human"
                         }
                     ]
@@ -407,7 +419,34 @@ adding indents. This can be useful for debugging.
 
                     [
                         {
-                            // TODO
+                            "callsign": "john.doe",
+                            "score": 0,
+                            "state": "Landed at Airfield",
+                            "enemy_aircraft_kills": 0,
+                            "enemy_static_aircraft_kills": 0,
+                            "enemy_tank_kills": 0,
+                            "enemy_car_kills": 0,
+                            "enemy_artillery_kills": 0,
+                            "enemy_aaa_kills": 0,
+                            "enemy_wagon_kills": 0,
+                            "enemy_ship_kills": 0,
+                            "enemy_radio_kills": 0,
+                            "friendly_aircraft_kills": 0,
+                            "friendly_static_aircraft_kills": 0,
+                            "friendly_tank_kills": 0,
+                            "friendly_car_kills": 0,
+                            "friendly_artillery_kills": 0,
+                            "friendly_aaa_kills": 0,
+                            "friendly_wagon_kills": 0,
+                            "friendly_ship_kills": 0,
+                            "friendly_radio_kills": 0,
+                            "bullets_fired": 0,
+                            "bullets_hit": 0,
+                            "bullets_hit_air_targets": 0,
+                            "rockets_launched": 0,
+                            "rockets_hit": 0,
+                            "bombs_dropped": 0,
+                            "bombs_hit": 0,
                             "__type__": "il2fb.ds.middleware.console.structures.HumanStatistics"
                         }
                     ]
@@ -862,7 +901,53 @@ adding indents. This can be useful for debugging.
 
                     [
                         {
-                            // TODO
+                            "index": 0,
+                            "id": "0_Chief",
+                            "pos": {
+                                "x": 8445,
+                                "y": 138394
+                            },
+                            "is_stationary": false,
+                            "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                        },
+                        {
+                            "index": 1,
+                            "id": "1_Chief",
+                            "pos": {
+                                "x": 37758,
+                                "y": 225193
+                            },
+                            "is_stationary": false,
+                            "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                        },
+                        {
+                            "index": 2,
+                            "id": "8_Chief",
+                            "pos": {
+                                "x": 29003,
+                                "y": 152135
+                            },
+                            "is_stationary": false,
+                            "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                        },
+                        {
+                            "index": 3,
+                            "id": "70_Static",
+                            "pos": {
+                                "x": 43387,
+                                "y": 154521
+                            },
+                            "is_stationary": true,
+                            "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                        },
+                        {
+                            "index": 4,
+                            "id": "72_Static",
+                            "pos": {
+                                "x": 43448,
+                                "y": 152697
+                            },
+                            "is_stationary": true,
                             "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
                         }
                     ]
@@ -887,7 +972,33 @@ adding indents. This can be useful for debugging.
 
                     [
                         {
-                            // TODO
+                            "index": 0,
+                            "id": "0_Chief",
+                            "pos": {
+                                "x": 8341,
+                                "y": 138642
+                            },
+                            "is_stationary": false,
+                            "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                        },
+                        {
+                            "index": 1,
+                            "id": "1_Chief",
+                            "pos": {
+                                "x": 37510,
+                                "y": 224931
+                            },
+                            "is_stationary": false,
+                            "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                        },
+                        {
+                            "index": 2,
+                            "id": "8_Chief",
+                            "pos": {
+                                "x": 28869,
+                                "y": 152486
+                            },
+                            "is_stationary": false,
                             "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
                         }
                     ]
@@ -911,7 +1022,23 @@ adding indents. This can be useful for debugging.
 
                     [
                         {
-                            // TODO
+                            "index": 3,
+                            "id": "70_Static",
+                            "pos": {
+                                "x": 43387,
+                                "y": 154521
+                            },
+                            "is_stationary": true,
+                            "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                        },
+                        {
+                            "index": 4,
+                            "id": "72_Static",
+                            "pos": {
+                                "x": 43448,
+                                "y": 152697
+                            },
+                            "is_stationary": true,
                             "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
                         }
                     ]
@@ -936,7 +1063,63 @@ adding indents. This can be useful for debugging.
 
                     [
                         {
-                            // TODO
+                            "index": 0,
+                            "id": "I_JG100",
+                            "pos": {
+                                "x": 80396,
+                                "y": 168150,
+                                "z": 1511
+                            },
+                            "is_human": false,
+                            "member_index": 0,
+                            "__type__": "il2fb.ds.middleware.device_link.structures.MovingAircraftPosition"
+                        },
+                        {
+                            "index": 1,
+                            "id": "I_JG100",
+                            "pos": {
+                                "x": 80329,
+                                "y": 168158,
+                                "z": 1510
+                            },
+                            "is_human": false,
+                            "member_index": 1,
+                            "__type__": "il2fb.ds.middleware.device_link.structures.MovingAircraftPosition"
+                        },
+                        {
+                            "index": 2,
+                            "id": "g0101",
+                            "pos": {
+                                "x": 66378,
+                                "y": 160822,
+                                "z": 1512
+                            },
+                            "is_human": false,
+                            "member_index": 0,
+                            "__type__": "il2fb.ds.middleware.device_link.structures.MovingAircraftPosition"
+                        },
+                        {
+                            "index": 3,
+                            "id": "g0101",
+                            "pos": {
+                                "x": 66307,
+                                "y": 160823,
+                                "z": 1510
+                            },
+                            "is_human": false,
+                            "member_index": 1,
+                            "__type__": "il2fb.ds.middleware.device_link.structures.MovingAircraftPosition"
+                        },
+                        {
+                            "index": 4,
+                            "id": "john.doe",
+                            "pos": {
+                                "x": 110695,
+                                "y": 202555,
+                                "z": 11
+                            },
+                            "is_human": true,
+                            "member_index": null,
                             "__type__": "il2fb.ds.middleware.device_link.structures.MovingAircraftPosition"
                         }
                     ]
@@ -961,7 +1144,36 @@ adding indents. This can be useful for debugging.
 
                     [
                         {
-                            // TODO
+                            "index": 0,
+                            "id": "2_Chief",
+                            "member_index": 0,
+                            "pos": {
+                                "x": 99673,
+                                "y": 202473,
+                                "z": 43
+                            },
+                            "__type__": "il2fb.ds.middleware.device_link.structures.MovingGroundUnitPosition"
+                        },
+                        {
+                            "index": 1,
+                            "id": "4_Chief",
+                            "member_index": 0,
+                            "pos": {
+                                "x": 163918,
+                                "y": 204481,
+                                "z": 15
+                            },
+                            "__type__": "il2fb.ds.middleware.device_link.structures.MovingGroundUnitPosition"
+                        },
+                        {
+                            "index": 2,
+                            "id": "4_Chief",
+                            "member_index": 1,
+                            "pos": {
+                                "x": 163928,
+                                "y": 204471,
+                                "z": 14
+                            },
                             "__type__": "il2fb.ds.middleware.device_link.structures.MovingGroundUnitPosition"
                         }
                     ]
@@ -986,7 +1198,29 @@ adding indents. This can be useful for debugging.
 
                     [
                         {
-                            // TODO
+                            "index": 0,
+                            "id": "0_bld",
+                            "pos": {
+                                "x": 100184,
+                                "y": 167170
+                            },
+                            "status": {
+                                "name": "alive",
+                                "value": "A"
+                            },
+                            "__type__": "il2fb.ds.middleware.device_link.structures.HousePosition"
+                        },
+                        {
+                            "index": 1,
+                            "id": "1_bld",
+                            "pos": {
+                                "x": 100174,
+                                "y": 167142
+                            },
+                            "status": {
+                                "name": "alive",
+                                "value": "A"
+                            },
                             "__type__": "il2fb.ds.middleware.device_link.structures.HousePosition"
                         }
                     ]
@@ -1011,7 +1245,23 @@ adding indents. This can be useful for debugging.
 
                     [
                         {
-                            // TODO
+                            "index": 0,
+                            "id": "0_Static",
+                            "pos": {
+                                "x": 71906,
+                                "y": 178119,
+                                "z": 1
+                            },
+                            "__type__": "il2fb.ds.middleware.device_link.structures.StationaryObjectPosition"
+                        },
+                        {
+                            "index": 1,
+                            "id": "1_Static",
+                            "pos": {
+                                "x": 71616,
+                                "y": 176956,
+                                "z": 1
+                            },
                             "__type__": "il2fb.ds.middleware.device_link.structures.StationaryObjectPosition"
                         }
                     ]
@@ -1034,12 +1284,81 @@ adding indents. This can be useful for debugging.
             Example
                 .. code-block:: json
 
-                    [
-                        {
-                            // TODO
-                            "__type__": "il2fb.ds.airbridge.radar.AllMovingActorsPositions"
-                        }
-                    ]
+                    {
+                        "aircrafts": [
+                            {
+                                "index": 0,
+                                "id": "I_JG100",
+                                "pos": {
+                                    "x": 82480,
+                                    "y": 161721,
+                                    "z": 1861
+                                },
+                                "is_human": false,
+                                "member_index": 0,
+                                "__type__": "il2fb.ds.middleware.device_link.structures.MovingAircraftPosition"
+                            },
+                            {
+                                "index": 1,
+                                "id": "john.doe",
+                                "pos": {
+                                    "x": 110695,
+                                    "y": 202554,
+                                    "z": 11
+                                },
+                                "is_human": true,
+                                "member_index": null,
+                                "__type__": "il2fb.ds.middleware.device_link.structures.MovingAircraftPosition"
+                            }
+                        ],
+                        "ground_units": [
+                            {
+                                "index": 0,
+                                "id": "2_Chief",
+                                "member_index": 0,
+                                "pos": {
+                                    "x": 99903,
+                                    "y": 203297,
+                                    "z": 41
+                                },
+                                "__type__": "il2fb.ds.middleware.device_link.structures.MovingGroundUnitPosition"
+                            },
+                            {
+                                "index": 1,
+                                "id": "3_Chief",
+                                "member_index": 0,
+                                "pos": {
+                                    "x": 88322,
+                                    "y": 184137,
+                                    "z": 1
+                                },
+                                "__type__": "il2fb.ds.middleware.device_link.structures.MovingGroundUnitPosition"
+                            }
+                        ],
+                        "ships": [
+                            {
+                                "index": 0,
+                                "id": "0_Chief",
+                                "pos": {
+                                    "x": 7720,
+                                    "y": 140132
+                                },
+                                "is_stationary": false,
+                                "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                            },
+                            {
+                                "index": 1,
+                                "id": "1_Chief",
+                                "pos": {
+                                    "x": 35568,
+                                    "y": 222874
+                                },
+                                "is_stationary": false,
+                                "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                            }
+                        ],
+                        "__type__": "il2fb.ds.airbridge.radar.AllMovingActorsPositions"
+                    }
 
     Authorization
         Required if configured.
@@ -1059,12 +1378,81 @@ adding indents. This can be useful for debugging.
             Example
                 .. code-block:: json
 
-                    [
-                        {
-                            // TODO
-                            "__type__": "il2fb.ds.airbridge.radar.AllStationaryActorsPositions"
-                        }
-                    ]
+                    {
+                        "stationary_objects": [
+                            {
+                                "index": 0,
+                                "id": "0_Static",
+                                "pos": {
+                                    "x": 71906,
+                                    "y": 178119,
+                                    "z": 1
+                                },
+                                "__type__": "il2fb.ds.middleware.device_link.structures.StationaryObjectPosition"
+                            },
+                            {
+                                "index": 1,
+                                "id": "1_Static",
+                                "pos": {
+                                    "x": 71616,
+                                    "y": 176956,
+                                    "z": 1
+                                },
+                                "__type__": "il2fb.ds.middleware.device_link.structures.StationaryObjectPosition"
+                            }
+                        ],
+                        "houses": [
+                            {
+                                "index": 0,
+                                "id": "0_bld",
+                                "pos": {
+                                    "x": 100184,
+                                    "y": 167170
+                                },
+                                "status": {
+                                    "name": "alive",
+                                    "value": "A"
+                                },
+                                "__type__": "il2fb.ds.middleware.device_link.structures.HousePosition"
+                            },
+                            {
+                                "index": 1,
+                                "id": "1_bld",
+                                "pos": {
+                                    "x": 100174,
+                                    "y": 167142
+                                },
+                                "status": {
+                                    "name": "alive",
+                                    "value": "A"
+                                },
+                                "__type__": "il2fb.ds.middleware.device_link.structures.HousePosition"
+                            }
+                        ],
+                        "ships": [
+                            {
+                                "index": 3,
+                                "id": "70_Static",
+                                "pos": {
+                                    "x": 43387,
+                                    "y": 154521
+                                },
+                                "is_stationary": true,
+                                "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                            },
+                            {
+                                "index": 4,
+                                "id": "72_Static",
+                                "pos": {
+                                    "x": 43448,
+                                    "y": 152697
+                                },
+                                "is_stationary": true,
+                                "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                            }
+                        ],
+                        "__type__": "il2fb.ds.airbridge.radar.AllStationaryActorsPositions"
+                    }
 
     Authorization
         Required if configured.
