@@ -281,8 +281,8 @@ Requests
 Requests are used to query data or to change state of processes and objects.
 They can have or not have responses depending on their type.
 
-All requests which interact with dedicated server accept ``timeout`` as
-optional parameter.
+All requests which interact with dedicated server accept optional parameter
+``timeout``. It has type ``float`` and is measured in seconds.
 
 
 REST
@@ -292,10 +292,12 @@ The following part of documentation lists and describes REST API endpoints
 which are available over HTTP.
 
 Bodies of POST requests and responses of all requests are formatted as JSON.
-All endpoints accept optional ``pretty`` query parameter.
-For example: ``/health?pretty``. It tells endpoints to make "pretty" output by
-adding indents. This can be useful for debugging.
 
+All endpoints accept optional ``pretty`` query parameter. For example:
+``/health?pretty``. It tells endpoints to make "pretty" output by adding
+indents. This can be useful for debugging.
+
+Timeouts are passed as query parameters also, e.g.: ``/info?timeout=3``
 
 ``GET /health``
     Check status of Airbridge and dedicated server. Can be useful for health
