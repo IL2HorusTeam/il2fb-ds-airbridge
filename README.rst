@@ -1,5 +1,5 @@
 IL-2 FB Dedicated Server Airbridge
-===================================
+##################################
 
 |python_versions| |license| |code_climate| |codebeat| |codacy| |scrutinizer|
 
@@ -10,12 +10,12 @@ IL-2 FB Dedicated Server Airbridge
 
 .. contents::
     :local:
-    :depth: 1
+    :depth: 3
     :backlinks: none
 
 
 Glossary
---------
+========
 
 Definitions below give explanation of terms used in this text. Some
 explanations may slightly differ from generally-accepted because of
@@ -114,7 +114,7 @@ NATS Streaming
 
 
 Synopsis
---------
+========
 
 Airbridge is an application which wraps dedicated server of
 «IL-2 Sturmovik: Forgotten Battles» aviasimulator.
@@ -139,7 +139,7 @@ experience.
 
 
 Rationale
----------
+=========
 
 The main rationale behind this project is a need for convenient unified
 programmatic access to different facilities of dedicated server along with
@@ -188,7 +188,7 @@ computation, logic and infrastructure of their systems.
 
 
 Architecture Overview
----------------------
+=====================
 
 The diagram below depicts architecture of Airbridge application for better
 understanding of its implementation and work principles.
@@ -232,11 +232,11 @@ strings if it failes to parse them. This can be used to track parsing errors
 which can occur if a new or unknown event happens. Such events can be stored
 and used for improving parser.
 
-All features of dedicated server can be separated into two categories: queries
-and streaming. Queries are made via radar or console client. Streaming is a bit
-more compticated as events of a single logical facility can come from different
-physical souces (i.e. events mainly come from game log but can come from
-console client as well).
+All features of dedicated server can be separated into two categories: requests
+and streaming. Requests are made via radar or console client. Streaming is a
+bit more compticated as events of a single logical facility can come from
+different physical souces (i.e. events mainly come from game log but can come
+from console client as well).
 
 There are four logical facilities which bring streaming to their subscribers:
 ``chat``, ``events``, ``not parsed strings`` and ``radar``. The first three
@@ -258,7 +258,7 @@ create a file streaming subscriber or NATS streaming subscriber which will work
 from application's startup till its end. Also it's possible to connect to
 Airbridge via WebSocket and subscribe to facilities dynamically.
 
-Clients of Airbridge can perform queries via different APIs depending on their
+Clients of Airbridge can perform requests via different APIs depending on their
 needs. They can use Request-Reply API over NATS or REST API over HTTP.
 
 REST API combines two independent parts: API for dedicated server and API for
@@ -268,55 +268,876 @@ but this does not make sense at this point due to maintenance overhead.
 
 
 Features Overview
------------------
+=================
+
+This section provides an overview of features which Airbridge brings to its
+users. As it was already mentioned in the previous section, all features can
+be devided into two categories: requests and streaming.
+
+
+Requests
+--------
+
+Requests are used to query data or to change state of processes and objects.
+They can have or not have responses depending on their type.
+
+All requests which interact with dedicated server accept ``timeout`` as
+optional parameter.
+
+
+REST
+~~~~
+
+The following part of documentation lists and describes REST API endpoints
+which are available over HTTP.
+
+Bodies of POST requests and responses of all requests are formatted as JSON.
+All endpoints accept optional ``pretty`` query parameter.
+For example: ``/health?pretty``. It tells endpoints to make "pretty" output by
+adding indents. This can be useful for debugging.
+
+
+``GET /health``
+    Check status of Airbridge and dedicated server. Can be useful for health
+    checking and failure detection with tools like
+    `Consul <https://www.consul.io>`_.
+
+    Parameters
+        No parameters.
+
+    Responses
+        ``200``
+            Server is alive.
+
+            Example
+                .. code-block:: json
+
+                    {
+                        "status": "alive"
+                    }
+
+    Authorization
+        No authorization.
+
+
+``GET /info``
+    Get information about server. Wraps ``server`` console command.
+
+    Parameters
+        No parameters.
+
+    Responses
+        ``200``
+            Serialized `il2fb.ds.middleware.console.structures.ServerInfo <https://github.com/IL2HorusTeam/il2fb-ds-middleware/blob/master/il2fb/ds/middleware/console/structures.py#L10>`_
+            structure.
+
+            Example
+                .. code-block:: json
+
+                    {
+                        "type": "Local server",
+                        "name": "Development server",
+                        "description": "Dedicated Server for local tests",
+                        "__type__": "il2fb.ds.middleware.console.structures.ServerInfo"
+                    }
+
+    Authorization
+        No authorization.
+
+
+``GET /humans``
+    Get list of users connected to server. Wraps ``user`` console command.
+
+    Parameters
+        No parameters.
+
+    Responses
+        ``200``
+            List of `il2fb.ds.middleware.console.structures.Human <https://github.com/IL2HorusTeam/il2fb-ds-middleware/blob/master/il2fb/ds/middleware/console/structures.py#L27>`_
+            structures.
+
+            Example
+                .. code-block:: json
+
+                    [
+                        {
+                            // TODO
+                            "__type__": "il2fb.ds.middleware.console.structures.Human"
+                        }
+                    ]
+
+    Authorization
+        Required if configured.
+
+
+``GET /humans/count``
+    Get number of users connected to server. Equals to a number of records
+    returned by ``user`` console command.
+
+    Parameters
+        No parameters.
+
+    Responses
+        ``200``
+            Integer representing number of connected users.
+
+            Example
+                .. code-block:: json
+
+                    7
+
+    Authorization
+        Required if configured.
+
+
+``GET /humans/statistics``
+    Get server's statistics for users connected to server.
+    Wraps ``user STAT`` console command.
+
+    Parameters
+        No parameters.
+
+    Responses
+        ``200``
+            List of `il2fb.ds.middleware.console.structures.HumanStatistics <https://github.com/IL2HorusTeam/il2fb-ds-middleware/blob/master/il2fb/ds/middleware/console/structures.py#L45>`_
+            structures.
+
+            Example
+                .. code-block:: json
+
+                    [
+                        {
+                            // TODO
+                            "__type__": "il2fb.ds.middleware.console.structures.HumanStatistics"
+                        }
+                    ]
+
+    Authorization
+        Required if configured.
+
+
+``POST /humans/kick``
+    Kick all users from server.
+
+    Responses
+        ``200``
+            Empty dictionary.
+
+            Example
+                .. code-block:: json
+
+                    {}
+
+    Authorization
+        Required if configured.
+
+
+``POST /humans/<callsign>/kick``
+    Kick user from server by user's callsign.
+
+    Parameters
+        In URL
+            ``callsign``
+                Callsign of user to kick.
+
+                Type
+                    ``string``
+
+                Example
+                    ``/humans/john.doe/kick``
+
+    Responses
+        ``200``
+            Empty dictionary.
+
+            Example
+                .. code-block:: json
+
+                    {}
+
+    Authorization
+        Required if configured.
+
+
+``POST /chat``
+    Send message in chat to everyone.
+
+    Parameters
+        In body
+            ``message``
+                Message to send.
+
+                Type
+                    ``string``
+
+            Body example
+                .. code-block:: json
+
+                    {
+                        "message": "hello!"
+                    }
+
+    Responses
+        ``200``
+            Empty dictionary.
+
+            Example
+                .. code-block:: json
+
+                    {}
+
+    Authorization
+        Required if configured.
+
+
+``POST /chat/humans/<callsign>``
+    Send message in chat to a user.
+
+    Parameters
+        In URL
+            ``callsign``
+                Callsign of user to chat to.
+
+                Type
+                    ``string``
+
+                Example:
+                    ``/chat/humans/john.doe``
+
+        In body
+            ``message``
+                Message to send.
+
+                Type
+                    ``string``
+
+            Body example
+                .. code-block:: json
+
+                    {
+                        "message": "hello!"
+                    }
+
+    Responses
+        ``200``
+            Empty dictionary.
+
+            Example
+                .. code-block:: json
+
+                    {}
+
+    Authorization
+        Required if configured.
+
+
+``POST /chat/belligerents/<belligerent>``
+    Send message in chat to a belligerent (army).
+
+    Parameters
+        In URL
+            ``belligerent``
+                Callsign of belligerent to chat to. See `il2fb.commons.organization.Belligerents <https://github.com/IL2HorusTeam/il2fb-commons/blob/master/il2fb/commons/organization.py#L20>`_
+                for details.
+
+                Type
+                    ``integer``
+
+                Example:
+                    ``/chat/belligerents/1``
+
+        In body
+            ``message``
+                Message to send.
+
+                Type
+                    ``string``
+
+            Body example
+                .. code-block:: json
+
+                    {
+                        "message": "hello!"
+                    }
+
+    Responses
+        ``200``
+            Empty dictionary.
+
+            Example
+                .. code-block:: json
+
+                    {}
+
+    Authorization
+        Required if configured.
+
+
+``GET /missions/<path>``
+    Browse missions storage (directories, ``.mis`` and ``.properties`` files).
+
+    Parameters
+        In URL
+            ``path``
+                Path to a directory or mission relative to server's
+                ``Missions`` directory. ``Missions`` root directory is used if
+                ``path`` is not specified.
+
+                Type
+                    ``string``
+
+                Example for directory
+                    ``/missions/Net/dogfight``
+
+                Example for mission
+                    ``/missions/Net/dogfight/demo_sample.mis``
+
+        In query:
+            ``json``
+                Optional parameter for getting parsed mission instead of raw
+                text. Parsing is done by `il2fb-mission-parser <https://github.com/IL2HorusTeam/il2fb-mission-parser>`_
+                library.
+
+            Type
+                ``string``
+
+            Example
+                ``/missions/Net/dogfight/demo_sample.mis?json``
+
+    Responses
+        ``200``
+            List of files and directories if resource is a directory.
+
+            Example
+                .. code-block:: json
+
+                    {
+                        "dirs": [
+                            "   1",
+                            "   2",
+                            "   3",
+                            "   4",
+                            "Pacific Fighters"
+                        ],
+                        "files": [
+                            "demo_sample.mis",
+                            "demo_sample_ru.properties"
+                        ]
+                    }
+
+        ``200``
+            Mission content as plain text if resource is a mission.
+
+        ``200``
+            Parsed mission content as JSON if resource is a mission and
+            ``json`` parameter is specified.
+            `Refer to parser's demo page <http://il2horusteam.github.io/il2fb-mission-parser/>`_
+            to explore resulting format.
+
+        ``404``
+            Requested resource does not exist.
+
+        ``500``
+            Mission parsing or another error has occurred.
+
+    Authorization
+        Required if configured.
+
+
+``POST /missions/<path>``
+    Upload mission and properties to a given directory in storage.
+
+    Parameters
+        In URL
+            ``path``
+                Path to a directory relative to server's ``Missions``
+                directory. ``Missions`` root directory is used if ``path`` is
+                not specified.
+
+                Type
+                    ``string``
+
+                Example
+                    ``/missions/Net/dogfight``
+
+        In body
+            Mission and properties are passed as parts of
+            ``multipart/form-data`` request. Name of form fields does not
+            matter. Amount of files being uploaded is not limited.
+
+            Request body example:
+                .. code-block::
+
+                    POST /missions/Net/dogfight/dev HTTP/1.1
+                    Host: 127.0.0.1:5000
+                    Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+                    ------WebKitFormBoundary7MA4YWxkTrZu0gW
+                    Content-Disposition: form-data; name="file"; filename="demo_sample.mis"
+                    Content-Type:
+
+
+                    ------WebKitFormBoundary7MA4YWxkTrZu0gW
+                    Content-Disposition: form-data; name="props"; filename="demo_sample_ru.properties"
+                    Content-Type:
+
+
+                    ------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+    Responses
+        ``200``
+            Empty dictionary.
+
+            Example
+                .. code-block:: json
+
+                    {}
+
+    Side effects
+        - Target directory is created if it does not exist.
+        - Files are overwritten if they are already exist.
+
+    Authorization
+        Required if configured.
+
+
+``DELETE /missions/<path>``
+    Delete mission with its property files from storage.
+
+    Parameters
+        In URL
+            ``path``
+                Path to a mission relative to server's ``Missions`` directory.
+
+                Type
+                    ``string``
+
+                Example
+                    ``/missions/Net/dogfight/demo_sample.mis``
+
+    Responses
+        ``200``
+            Empty dictionary.
+
+            Example
+                .. code-block:: json
+
+                    {}
+
+        ``404``
+            Requested mission does not exist.
+
+    Side effects
+        ``.property`` files which are associated with a given mission are also
+        deleted if present.
+
+    Authorization
+        Required if configured.
+
+
+``GET /missions/current/info``
+    Get information about current mission. Wraps ``mission`` console command.
+
+    Parameters
+        No parameters.
+
+    Responses
+        ``200``
+            Serialized `il2fb.ds.middleware.console.structures.MissionInfo <https://github.com/IL2HorusTeam/il2fb-ds-middleware/blob/master/il2fb/ds/middleware/console/structures.py#L154>`_
+            structure.
+
+            Example
+                .. code-block:: json
+
+                    {
+                        "status": {
+                            "name": "not_loaded"
+                        },
+                        "file_path": null,
+                        "__type__": "il2fb.ds.middleware.console.structures.MissionInfo"
+                    }
+
+    Authorization
+        Required if configured.
+
+
+``POST /missions/<path>/load``
+    Load a given mission to make it current. Wraps ``mission LOAD`` console
+    command.
+
+    Parameters
+        In URL
+            ``path``
+                Path to a mission relative to server's ``Missions`` directory.
+
+                Type
+                    ``string``
+
+                Example
+                    ``/missions/Net/dogfight/demo_sample.mis/load``
+
+    Responses
+        ``200``
+            Empty dictionary.
+
+            Example
+                .. code-block:: json
+
+                    {}
+
+    Authorization
+        Required if configured.
+
+
+``POST /missions/current/begin``
+    Begin current mission. Wraps ``mission BEGIN`` console command.
+
+    Parameters
+        No parameters.
+
+    Responses
+        ``200``
+            Empty dictionary.
+
+            Example
+                .. code-block:: json
+
+                    {}
+
+    Authorization
+        Required if configured.
+
+
+``POST /missions/current/end``
+    End current mission. Wraps ``mission END`` console command.
+
+    Parameters
+        No parameters.
+
+    Responses
+        ``200``
+            Empty dictionary.
+
+            Example
+                .. code-block:: json
+
+                    {}
+
+    Authorization
+        Required if configured.
+
+
+``POST /missions/current/unload``
+    Unload current mission. Wraps ``mission DESTROY`` console command.
+
+    Parameters
+        No parameters.
+
+    Responses
+        ``200``
+            Empty dictionary.
+
+            Example
+                .. code-block:: json
+
+                    {}
+
+    Authorization
+        Required if configured.
+
+
+``GET /radar/ships``
+    Get positions of all ships (moving and stationary).
+
+    Parameters
+        No parameters.
+
+    Responses
+        ``200``
+            List of `il2fb.ds.middleware.device_link.structures.ShipPosition <https://github.com/IL2HorusTeam/il2fb-ds-middleware/blob/master/il2fb/ds/middleware/device_link/structures.py#L57>`_
+            structures.
+
+            Example
+                .. code-block:: json
+
+                    [
+                        {
+                            // TODO
+                            "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                        }
+                    ]
+
+    Authorization
+        Required if configured.
+
+
+``GET /radar/ships/moving``
+    Get positions of moving ships.
+
+    Parameters
+        No parameters.
+
+    Responses
+        ``200``
+            List of `il2fb.ds.middleware.device_link.structures.ShipPosition <https://github.com/IL2HorusTeam/il2fb-ds-middleware/blob/master/il2fb/ds/middleware/device_link/structures.py#L57>`_
+            structures.
+
+            Example
+                .. code-block:: json
+
+                    [
+                        {
+                            // TODO
+                            "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                        }
+                    ]
+
+    Authorization
+        Required if configured.
+
+``GET /radar/ships/stationary``
+    Get positions of stationary ships.
+
+    Parameters
+        No parameters.
+
+    Responses
+        ``200``
+            List of `il2fb.ds.middleware.device_link.structures.ShipPosition <https://github.com/IL2HorusTeam/il2fb-ds-middleware/blob/master/il2fb/ds/middleware/device_link/structures.py#L57>`_
+            structures.
+
+            Example
+                .. code-block:: json
+
+                    [
+                        {
+                            // TODO
+                            "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                        }
+                    ]
+
+    Authorization
+        Required if configured.
+
+
+``GET /radar/aircrafts/moving``
+    Get positions of moving aircrafts (controlled by users or AI).
+
+    Parameters
+        No parameters.
+
+    Responses
+        ``200``
+            List of `il2fb.ds.middleware.device_link.structures.MovingAircraftPosition <https://github.com/IL2HorusTeam/il2fb-ds-middleware/blob/master/il2fb/ds/middleware/device_link/structures.py#L23>`_
+            structures.
+
+            Example
+                .. code-block:: json
+
+                    [
+                        {
+                            // TODO
+                            "__type__": "il2fb.ds.middleware.device_link.structures.MovingAircraftPosition"
+                        }
+                    ]
+
+    Authorization
+        Required if configured.
+
+
+``GET /radar/ground-units/moving``
+    Get positions of moving ground units.
+
+    Parameters
+        No parameters.
+
+    Responses
+        ``200``
+            List of `il2fb.ds.middleware.device_link.structures.MovingGroundUnitPosition <https://github.com/IL2HorusTeam/il2fb-ds-middleware/blob/master/il2fb/ds/middleware/device_link/structures.py#L41>`_
+            structures.
+
+            Example
+                .. code-block:: json
+
+                    [
+                        {
+                            // TODO
+                            "__type__": "il2fb.ds.middleware.device_link.structures.MovingGroundUnitPosition"
+                        }
+                    ]
+
+    Authorization
+        Required if configured.
+
+
+``GET /radar/houses``
+    Get positions of houses.
+
+    Parameters
+        No parameters.
+
+    Responses
+        ``200``
+            List of `il2fb.ds.middleware.device_link.structures.HousePosition <https://github.com/IL2HorusTeam/il2fb-ds-middleware/blob/master/il2fb/ds/middleware/device_link/structures.py#L82>`_
+            structures.
+
+            Example
+                .. code-block:: json
+
+                    [
+                        {
+                            // TODO
+                            "__type__": "il2fb.ds.middleware.device_link.structures.HousePosition"
+                        }
+                    ]
+
+    Authorization
+        Required if configured.
+
+
+``GET /radar/stationary-objects``
+    Get positions of stationary objects.
+
+    Parameters
+        No parameters.
+
+    Responses
+        ``200``
+            List of `il2fb.ds.middleware.device_link.structures.StationaryObjectPosition <https://github.com/IL2HorusTeam/il2fb-ds-middleware/blob/master/il2fb/ds/middleware/device_link/structures.py#L73>`_
+            structures.
+
+            Example
+                .. code-block:: json
+
+                    [
+                        {
+                            // TODO
+                            "__type__": "il2fb.ds.middleware.device_link.structures.StationaryObjectPosition"
+                        }
+                    ]
+
+    Authorization
+        Required if configured.
+
+
+``GET /radar/moving``
+    Get positions of all moving actors (aircrafts, ground units and moving
+    ships).
+
+    Parameters
+        No parameters.
+
+    Responses
+        ``200``
+            Serialized structure `il2fb.ds.airbridge.radar.AllMovingActorsPositions <https://github.com/IL2HorusTeam/il2fb-ds-airbridge/blob/master/il2fb/ds/airbridge/radar.py#L24>`_.
+
+            Example
+                .. code-block:: json
+
+                    [
+                        {
+                            // TODO
+                            "__type__": "il2fb.ds.airbridge.radar.AllMovingActorsPositions"
+                        }
+                    ]
+
+    Authorization
+        Required if configured.
+
+
+``GET /radar/stationary``
+    Get positions of all stationary actors (stationary objects, houses and
+    stationary ships).
+
+    Parameters
+        No parameters.
+
+    Responses
+        ``200``
+            Serialized structure `il2fb.ds.airbridge.radar.AllStationaryActorsPositions <https://github.com/IL2HorusTeam/il2fb-ds-airbridge/blob/master/il2fb/ds/airbridge/radar.py#L38>`_.
+
+            Example
+                .. code-block:: json
+
+                    [
+                        {
+                            // TODO
+                            "__type__": "il2fb.ds.airbridge.radar.AllStationaryActorsPositions"
+                        }
+                    ]
+
+    Authorization
+        Required if configured.
+
+
+NATS
+~~~~
+
+// TODO:
+
+
+Streaming
+---------
+
+// TODO:
+
+
+WebSockets
+~~~~~~~~~~
+
+// TODO:
+
+
+NATS
+~~~~
 
 // TODO:
 
 
 Installation
-------------
+============
 
 // TODO:
 
 
 Configuration
--------------
+=============
 
 // TODO:
 
 
 Security
---------
+========
 
 // TODO:
 
 
 Usage
------
+=====
 
 // TODO:
 
 
 Caveats
--------
+=======
 
 // TODO:
 
 
 FAQ
----
+===
 
 // TODO:
 
 
-Contributing
-------------
+Development
+===========
 
 // TODO:
 
 
 Changelog
----------
+=========
 
 
 // TODO:
