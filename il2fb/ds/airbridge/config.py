@@ -10,6 +10,9 @@ from jsonschema import validate
 CONFIG_SCHEMA = {
     'type': 'object',
     'properties': {
+        'daemon': {
+            'type': 'boolean',
+        },
         'wine_bin_path': {
             'type': 'string',
         },
@@ -419,6 +422,7 @@ CONFIG_SCHEMA = {
 
 
 CONFIG_DEFAULTS = {
+    'daemon': False,
     'wine_bin_path': 'wine',
     'state': {
         'file_path': 'airbridge.state',

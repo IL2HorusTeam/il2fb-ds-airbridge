@@ -193,19 +193,23 @@ def run_main(config: ServerConfig, state: DotAccessDict, trace: bool) -> None:
 
     LOG.info("init dedicated server")
 
-    terminal = Terminal()
+    ds_options = dict(
+        loop=main_loop,
+        exe_path=config.ds.exe_path,
+        config_path=config.ds.get('config_path'),
+        start_script_path=config.ds.get('start_script_path'),
+        wine_bin_path=config.wine_bin_path,
+    )
+
+    if not config.daemon:
+        terminal = Terminal()
+
+        ds_options['stdout_handler'] = terminal.handle_stdout
+        ds_options['stderr_handler'] = terminal.handle_stderr
+        ds_options['prompt_handler'] = terminal.handle_prompt
 
     try:
-        ds = DedicatedServer(
-            loop=main_loop,
-            exe_path=config.ds.exe_path,
-            config_path=config.ds.get('config_path'),
-            start_script_path=config.ds.get('start_script_path'),
-            wine_bin_path=config.wine_bin_path,
-            stdout_handler=terminal.handle_stdout,
-            stderr_handler=terminal.handle_stderr,
-            prompt_handler=terminal.handle_prompt,
-        )
+        ds = DedicatedServer(**ds_options)
     except Exception:
         LOG.fatal("failed to init dedicated server", exc_info=True)
         abort()
@@ -276,10 +280,10 @@ def run_main(config: ServerConfig, state: DotAccessDict, trace: bool) -> None:
     exit_handler = wrap_exit_handler(main_thread, exit_handler)
     set_exit_handler(main_loop, exit_handler)
 
-    LOG.info("start input handler")
-
-    stdin_handler = make_thread_safe_string_handler(main_loop, ds.input)
-    terminal.listen_stdin(handler=stdin_handler)
+    if not config.daemon:
+        LOG.info("start input handler")
+        stdin_handler = make_thread_safe_string_handler(main_loop, ds.input)
+        terminal.listen_stdin(handler=stdin_handler)
 
     try:
         LOG.info("wait for dedicated server to exit")
