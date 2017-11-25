@@ -22,8 +22,8 @@ LOG = logging.getLogger(__name__)
 class NATS_OPCODE(IntEnum):
     GET_SERVER_INFO = 0
 
-    GET_HUMANS_COUNT = 10
-    GET_HUMANS_LIST = 11
+    GET_HUMANS_LIST = 10
+    GET_HUMANS_COUNT = 11
     GET_HUMANS_STATISTICS = 12
 
     KICK_ALL_HUMANS = 20
@@ -39,9 +39,9 @@ class NATS_OPCODE(IntEnum):
     END_MISSION = 43
     UNLOAD_MISSION = 44
 
-    GET_MOVING_SHIPS_POSITIONS = 50
-    GET_STATIONARY_SHIPS_POSITIONS = 51
-    GET_ALL_SHIPS_POSITIONS = 52
+    GET_ALL_SHIPS_POSITIONS = 50
+    GET_MOVING_SHIPS_POSITIONS = 51
+    GET_STATIONARY_SHIPS_POSITIONS = 52
 
     GET_MOVING_AIRCRAFTS_POSITIONS = 53
     GET_MOVING_GROUND_UNITS_POSITIONS = 54
@@ -77,8 +77,8 @@ class NATSSubscriber:
         self._operations = {
             NATS_OPCODE.GET_SERVER_INFO: self._console_client.get_server_info,
 
-            NATS_OPCODE.GET_HUMANS_COUNT: self._console_client.get_humans_count,
             NATS_OPCODE.GET_HUMANS_LIST: self._console_client.get_humans_list,
+            NATS_OPCODE.GET_HUMANS_COUNT: self._console_client.get_humans_count,
             NATS_OPCODE.GET_HUMANS_STATISTICS: self._console_client.get_humans_statistics,
 
             NATS_OPCODE.KICK_ALL_HUMANS: self._console_client.kick_all_humans,
@@ -94,9 +94,9 @@ class NATSSubscriber:
             NATS_OPCODE.END_MISSION: self._console_client.end_mission,
             NATS_OPCODE.UNLOAD_MISSION: self._console_client.unload_mission,
 
+            NATS_OPCODE.GET_ALL_SHIPS_POSITIONS: self._radar.get_all_ships_positions,
             NATS_OPCODE.GET_MOVING_SHIPS_POSITIONS: self._radar.get_moving_ships_positions,
             NATS_OPCODE.GET_STATIONARY_SHIPS_POSITIONS: self._radar.get_stationary_ships_positions,
-            NATS_OPCODE.GET_ALL_SHIPS_POSITIONS: self._radar.get_all_ships_positions,
 
             NATS_OPCODE.GET_MOVING_AIRCRAFTS_POSITIONS: self._radar.get_moving_aircrafts_positions,
             NATS_OPCODE.GET_MOVING_GROUND_UNITS_POSITIONS: self._radar.get_moving_ground_units_positions,
