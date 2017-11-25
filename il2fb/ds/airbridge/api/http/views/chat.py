@@ -57,7 +57,7 @@ async def chat_to_human(request):
         if timeout is not None:
             timeout = float(timeout)
 
-        callsign = request.match_info['callsign']
+        addressee = request.match_info['addressee']
         body = await request.json(loads=json.loads)
         message = body['message']
     except Exception:
@@ -70,7 +70,7 @@ async def chat_to_human(request):
     try:
         await request.app['console_client'].chat_to_human(
             message=message,
-            addressee=callsign,
+            addressee=addressee,
             timeout=timeout,
         )
     except Exception:
@@ -92,9 +92,10 @@ async def chat_to_belligerent(request):
         if timeout is not None:
             timeout = float(timeout)
 
-        belligerent = request.match_info['belligerent']
-        belligerent = int(belligerent)
-        belligerent = Belligerents.get_by_value(belligerent)
+        addressee = request.match_info['addressee']
+        addressee = int(addressee)
+        addressee = Belligerents.get_by_value(addressee)
+
         body = await request.json(loads=json.loads)
         message = body['message']
     except Exception:
@@ -109,7 +110,7 @@ async def chat_to_belligerent(request):
     try:
         await request.app['console_client'].chat_to_belligerent(
             message=message,
-            addressee=belligerent,
+            addressee=addressee,
             timeout=timeout,
         )
     except Exception:

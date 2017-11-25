@@ -531,12 +531,12 @@ Timeouts are passed as query parameters also, e.g.: ``/info?timeout=3``
         Required if configured.
 
 
-``POST /chat/humans/<callsign>``
+``POST /chat/humans/<addressee>``
     Send message in chat to a user.
 
     Parameters
         In URL
-            ``callsign``
+            ``addressee``
                 Callsign of user to chat to.
 
                 Type
@@ -572,13 +572,13 @@ Timeouts are passed as query parameters also, e.g.: ``/info?timeout=3``
         Required if configured.
 
 
-``POST /chat/belligerents/<belligerent>``
+``POST /chat/belligerents/<addressee>``
     Send message in chat to a belligerent (army).
 
     Parameters
         In URL
-            ``belligerent``
-                Callsign of belligerent to chat to. See `il2fb.commons.organization.Belligerents <https://github.com/IL2HorusTeam/il2fb-commons/blob/master/il2fb/commons/organization.py#L20>`_
+            ``addressee``
+                Belligerent to chat to. See `il2fb.commons.organization.Belligerents <https://github.com/IL2HorusTeam/il2fb-commons/blob/master/il2fb/commons/organization.py#L20>`_
                 for details.
 
                 Type

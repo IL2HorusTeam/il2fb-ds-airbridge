@@ -41,10 +41,10 @@ def _setup_humans_routes(router: AbstractRouter) -> None:
 
 def _setup_chat_routes(router: AbstractRouter) -> None:
     router.add_post(
-        '/chat/humans/{callsign}', chat.chat_to_human,
+        '/chat/humans/{addressee}', chat.chat_to_human,
     )
     router.add_post(
-        '/chat/belligerents/{belligerent}', chat.chat_to_belligerent,
+        '/chat/belligerents/{addressee}', chat.chat_to_belligerent,
     )
     router.add_post(
         '/chat', chat.chat_to_all,
