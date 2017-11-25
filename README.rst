@@ -1184,94 +1184,6 @@ Timeouts are passed as query parameters also, e.g.: ``/info?timeout=3``
         Required if configured.
 
 
-``GET /radar/houses``
-    Get positions of houses.
-
-    Parameters
-        No parameters.
-
-    Responses
-        ``200``
-            List of `il2fb.ds.middleware.device_link.structures.HousePosition <https://github.com/IL2HorusTeam/il2fb-ds-middleware/blob/master/il2fb/ds/middleware/device_link/structures.py#L82>`_
-            structures.
-
-            Example
-                .. code-block:: json
-
-                    [
-                        {
-                            "index": 0,
-                            "id": "0_bld",
-                            "pos": {
-                                "x": 100184,
-                                "y": 167170
-                            },
-                            "status": {
-                                "name": "alive",
-                                "value": "A"
-                            },
-                            "__type__": "il2fb.ds.middleware.device_link.structures.HousePosition"
-                        },
-                        {
-                            "index": 1,
-                            "id": "1_bld",
-                            "pos": {
-                                "x": 100174,
-                                "y": 167142
-                            },
-                            "status": {
-                                "name": "alive",
-                                "value": "A"
-                            },
-                            "__type__": "il2fb.ds.middleware.device_link.structures.HousePosition"
-                        }
-                    ]
-
-    Authorization
-        Required if configured.
-
-
-``GET /radar/stationary-objects``
-    Get positions of stationary objects.
-
-    Parameters
-        No parameters.
-
-    Responses
-        ``200``
-            List of `il2fb.ds.middleware.device_link.structures.StationaryObjectPosition <https://github.com/IL2HorusTeam/il2fb-ds-middleware/blob/master/il2fb/ds/middleware/device_link/structures.py#L73>`_
-            structures.
-
-            Example
-                .. code-block:: json
-
-                    [
-                        {
-                            "index": 0,
-                            "id": "0_Static",
-                            "pos": {
-                                "x": 71906,
-                                "y": 178119,
-                                "z": 1
-                            },
-                            "__type__": "il2fb.ds.middleware.device_link.structures.StationaryObjectPosition"
-                        },
-                        {
-                            "index": 1,
-                            "id": "1_Static",
-                            "pos": {
-                                "x": 71616,
-                                "y": 176956,
-                                "z": 1
-                            },
-                            "__type__": "il2fb.ds.middleware.device_link.structures.StationaryObjectPosition"
-                        }
-                    ]
-
-    Authorization
-        Required if configured.
-
-
 ``GET /radar/moving``
     Get positions of all moving actors (aircrafts, ground units and moving
     ships).
@@ -1361,6 +1273,94 @@ Timeouts are passed as query parameters also, e.g.: ``/info?timeout=3``
                         ],
                         "__type__": "il2fb.ds.airbridge.radar.AllMovingActorsPositions"
                     }
+
+    Authorization
+        Required if configured.
+
+
+``GET /radar/houses``
+    Get positions of houses.
+
+    Parameters
+        No parameters.
+
+    Responses
+        ``200``
+            List of `il2fb.ds.middleware.device_link.structures.HousePosition <https://github.com/IL2HorusTeam/il2fb-ds-middleware/blob/master/il2fb/ds/middleware/device_link/structures.py#L82>`_
+            structures.
+
+            Example
+                .. code-block:: json
+
+                    [
+                        {
+                            "index": 0,
+                            "id": "0_bld",
+                            "pos": {
+                                "x": 100184,
+                                "y": 167170
+                            },
+                            "status": {
+                                "name": "alive",
+                                "value": "A"
+                            },
+                            "__type__": "il2fb.ds.middleware.device_link.structures.HousePosition"
+                        },
+                        {
+                            "index": 1,
+                            "id": "1_bld",
+                            "pos": {
+                                "x": 100174,
+                                "y": 167142
+                            },
+                            "status": {
+                                "name": "alive",
+                                "value": "A"
+                            },
+                            "__type__": "il2fb.ds.middleware.device_link.structures.HousePosition"
+                        }
+                    ]
+
+    Authorization
+        Required if configured.
+
+
+``GET /radar/stationary-objects``
+    Get positions of stationary objects.
+
+    Parameters
+        No parameters.
+
+    Responses
+        ``200``
+            List of `il2fb.ds.middleware.device_link.structures.StationaryObjectPosition <https://github.com/IL2HorusTeam/il2fb-ds-middleware/blob/master/il2fb/ds/middleware/device_link/structures.py#L73>`_
+            structures.
+
+            Example
+                .. code-block:: json
+
+                    [
+                        {
+                            "index": 0,
+                            "id": "0_Static",
+                            "pos": {
+                                "x": 71906,
+                                "y": 178119,
+                                "z": 1
+                            },
+                            "__type__": "il2fb.ds.middleware.device_link.structures.StationaryObjectPosition"
+                        },
+                        {
+                            "index": 1,
+                            "id": "1_Static",
+                            "pos": {
+                                "x": 71616,
+                                "y": 176956,
+                                "z": 1
+                            },
+                            "__type__": "il2fb.ds.middleware.device_link.structures.StationaryObjectPosition"
+                        }
+                    ]
 
     Authorization
         Required if configured.
@@ -1463,7 +1463,1124 @@ Timeouts are passed as query parameters also, e.g.: ``/info?timeout=3``
 NATS
 ~~~~
 
-// TODO:
+Airbridge provides requests API over NATS by using it's
+`request-reply <http://nats.io/documentation/concepts/nats-req-rep/>`_
+mechanism.
+
+All messages are formatted as JSON just like in case of REST.
+
+Each request message defines its operation by ``opcode`` parameter of
+``integer`` type.
+
+Those requests, which accept arguments, specify ``payload`` parameter as
+dictionary.
+
+Optional ``timeout`` argument is also available for all requests. As in case
+of REST API, this parameter has type ``float`` and is measured in seconds, for
+example:
+
+.. code-block:: json
+
+    {
+        "opcode": 0,
+        "payload": {
+            "timeout": 5
+        }
+    }
+
+Every response contains ``status``. It is an integer representation of request
+execution status, where ``0`` stands for success and ``1`` — for failure.
+Example:
+
+.. code-block:: json
+
+    {
+        "status": 0
+    }
+
+
+Available NATS requests are listed below along with examples of responses.
+
+
+``GET_SERVER_INFO``
+    Get information about server. Wraps ``server`` console command.
+
+    Opcode
+        ``0``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 0
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0,
+                "payload": {
+                    "type": "Local server",
+                    "name": "Development server",
+                    "description": "Dedicated Server for local tests",
+                    "__type__": "il2fb.ds.middleware.console.structures.ServerInfo"
+                }
+            }
+
+
+``GET_HUMANS_LIST``
+    Get list of users connected to server. Wraps ``user`` console command.
+
+    Opcode
+        ``10``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 10
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0,
+                "payload": [
+                    {
+                        "callsign": "john.doe",
+                        "ping": 61,
+                        "score": 0,
+                        "belligerent": {
+                            "name": "none",
+                            "value": 0,
+                            "verbose_name": "none",
+                            "help_text": null,
+                        },
+                        "aircraft": null,
+                        "__type__": "il2fb.ds.middleware.console.structures.Human"
+                    }
+                ]
+            }
+
+
+``GET_HUMANS_COUNT``
+    Get number of users connected to server. Equals to a number of records
+    returned by ``user`` console command.
+
+    Opcode
+        ``11``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 11
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0,
+                "payload": 7
+            }
+
+
+``GET_HUMANS_STATISTICS``
+    Get server's statistics for users connected to server.
+    Wraps ``user STAT`` console command.
+
+    Opcode
+        ``12``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 12
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0,
+                "payload": [
+                    {
+                        "callsign": "john.doe",
+                        "score": 0,
+                        "state": "Selects Aircraft",
+                        "enemy_aircraft_kills": 0,
+                        "enemy_static_aircraft_kills": 0,
+                        "enemy_tank_kills": 0,
+                        "enemy_car_kills": 0,
+                        "enemy_artillery_kills": 0,
+                        "enemy_aaa_kills": 0,
+                        "enemy_wagon_kills": 0,
+                        "enemy_ship_kills": 0,
+                        "enemy_radio_kills": 0,
+                        "friendly_aircraft_kills": 0,
+                        "friendly_static_aircraft_kills": 0,
+                        "friendly_tank_kills": 0,
+                        "friendly_car_kills": 0,
+                        "friendly_artillery_kills": 0,
+                        "friendly_aaa_kills": 0,
+                        "friendly_wagon_kills": 0,
+                        "friendly_ship_kills": 0,
+                        "friendly_radio_kills": 0,
+                        "bullets_fired": 0,
+                        "bullets_hit": 0,
+                        "bullets_hit_air_targets": 0,
+                        "rockets_launched": 0,
+                        "rockets_hit": 0,
+                        "bombs_dropped": 0,
+                        "bombs_hit": 0,
+                        "__type__": "il2fb.ds.middleware.console.structures.HumanStatistics"
+                    }
+                ]
+            }
+
+
+``KICK_ALL_HUMANS``
+    Kick all users from server.
+
+    Opcode
+        ``20``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 20
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0,
+                "payload": 0
+            }
+
+
+``KICK_HUMAN_BY_CALLSIGN``
+    Kick user from server by user's callsign.
+
+    Opcode
+        ``21``
+
+    Parameters
+        ``callsign``
+            Callsign of user to kick.
+
+            Type
+                ``string``
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 21,
+                "payload": {
+                    "callsign": "john.doe"
+                }
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0,
+                "payload": null
+            }
+
+
+``CHAT_TO_ALL``
+    Send message in chat to everyone.
+
+    Opcode
+        ``30``
+
+    Parameters
+        ``message``
+            Message to send.
+
+            Type
+                ``string``
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 30,
+                "payload": {
+                    "message": "hello!"
+                }
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0,
+                "payload": null
+            }
+
+
+``CHAT_TO_HUMAN``
+    Send message in chat to a user.
+
+    Opcode
+        ``31``
+
+    Parameters
+        ``message``
+            Message to send.
+
+            Type
+                ``string``
+
+        ``addressee``
+            Callsign of user to chat to.
+
+            Type
+                ``string``
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 31,
+                "payload": {
+                    "message": "hello!",
+                    "addressee": "john.doe"
+                }
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0,
+                "payload": null
+            }
+
+
+``CHAT_TO_BELLIGERENT``
+    Send message in chat to a belligerent (army).
+
+    Opcode
+        ``32``
+
+    Parameters
+        ``message``
+            Message to send.
+
+            Type
+                ``string``
+
+        ``addressee``
+            Callsign of belligerent to chat to. See `il2fb.commons.organization.Belligerents <https://github.com/IL2HorusTeam/il2fb-commons/blob/master/il2fb/commons/organization.py#L20>`_
+            for details.
+
+            Type
+                ``integer``
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 32,
+                "payload": {
+                    "message": "hello!",
+                    "addressee": 1
+                }
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0,
+                "payload": null
+            }
+
+
+``GET_MISSION_INFO``
+    Get information about current mission. Wraps ``mission`` console command.
+
+    Opcode
+        ``40``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 40
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0,
+                "payload": {
+                    "status": {
+                        "name": "not_loaded"
+                    },
+                    "file_path": null,
+                    "__type__": "il2fb.ds.middleware.console.structures.MissionInfo"
+                }
+            }
+
+
+``LOAD_MISSION``
+    Load a given mission to make it current. Wraps ``mission LOAD`` console
+    command.
+
+    Opcode
+        ``41``
+
+    Parameters
+        ``file_path``
+            Path to a mission relative to server's ``Missions`` directory.
+
+            Type
+                ``string``
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 41,
+                "payload": {
+                    "file_path": "Net/dogfight/demo_sample.mis"
+                }
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0,
+                "payload": null
+            }
+
+
+``BEGIN_MISSION``
+    Begin current mission. Wraps ``mission BEGIN`` console command.
+
+    Opcode
+        ``42``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 42
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0,
+                "payload": null
+            }
+
+
+``END_MISSION``
+    End current mission. Wraps ``mission END`` console command.
+
+    Opcode
+        ``43``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 43
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0,
+                "payload": null
+            }
+
+
+``UNLOAD_MISSION``
+    Unload current mission. Wraps ``mission DESTROY`` console command.
+
+    Opcode
+        ``44``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 44
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0,
+                "payload": null
+            }
+
+
+``GET_ALL_SHIPS_POSITIONS``
+    Get positions of all ships (moving and stationary).
+
+    Opcode
+        ``50``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 50
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0,
+                "payload": [
+                    {
+                        "index": 0,
+                        "id": "0_Chief",
+                        "pos": {
+                            "x": 8445,
+                            "y": 138394
+                        },
+                        "is_stationary": false,
+                        "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                    },
+                    {
+                        "index": 1,
+                        "id": "1_Chief",
+                        "pos": {
+                            "x": 37758,
+                            "y": 225193
+                        },
+                        "is_stationary": false,
+                        "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                    },
+                    {
+                        "index": 2,
+                        "id": "8_Chief",
+                        "pos": {
+                            "x": 29003,
+                            "y": 152135
+                        },
+                        "is_stationary": false,
+                        "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                    },
+                    {
+                        "index": 3,
+                        "id": "70_Static",
+                        "pos": {
+                            "x": 43387,
+                            "y": 154521
+                        },
+                        "is_stationary": true,
+                        "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                    },
+                    {
+                        "index": 4,
+                        "id": "72_Static",
+                        "pos": {
+                            "x": 43448,
+                            "y": 152697
+                        },
+                        "is_stationary": true,
+                        "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                    }
+                ]
+            }
+
+
+``GET_MOVING_SHIPS_POSITIONS``
+    Get positions of moving ships.
+
+    Opcode
+        ``51``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 51
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0,
+                "payload": [
+                    {
+                        "index": 0,
+                        "id": "0_Chief",
+                        "pos": {
+                            "x": 8445,
+                            "y": 138394
+                        },
+                        "is_stationary": false,
+                        "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                    },
+                    {
+                        "index": 1,
+                        "id": "1_Chief",
+                        "pos": {
+                            "x": 37758,
+                            "y": 225193
+                        },
+                        "is_stationary": false,
+                        "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                    },
+                    {
+                        "index": 2,
+                        "id": "8_Chief",
+                        "pos": {
+                            "x": 29003,
+                            "y": 152135
+                        },
+                        "is_stationary": false,
+                        "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                    }
+                ]
+            }
+
+
+``GET_STATIONARY_SHIPS_POSITIONS``
+    Get positions of stationary ships.
+
+    Opcode
+        ``52``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 52
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0,
+                "payload": [
+                    {
+                        "index": 3,
+                        "id": "70_Static",
+                        "pos": {
+                            "x": 43387,
+                            "y": 154521
+                        },
+                        "is_stationary": true,
+                        "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                    },
+                    {
+                        "index": 4,
+                        "id": "72_Static",
+                        "pos": {
+                            "x": 43448,
+                            "y": 152697
+                        },
+                        "is_stationary": true,
+                        "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                    }
+                ]
+            }
+
+
+``GET_MOVING_AIRCRAFTS_POSITIONS``
+    Get positions of moving aircrafts (controlled by users or AI).
+
+    Opcode
+        ``53``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 53
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0,
+                "payload": [
+                    {
+                        "index": 0,
+                        "id": "I_JG100",
+                        "pos": {
+                            "x": 80396,
+                            "y": 168150,
+                            "z": 1511
+                        },
+                        "is_human": false,
+                        "member_index": 0,
+                        "__type__": "il2fb.ds.middleware.device_link.structures.MovingAircraftPosition"
+                    },
+                    {
+                        "index": 1,
+                        "id": "I_JG100",
+                        "pos": {
+                            "x": 80329,
+                            "y": 168158,
+                            "z": 1510
+                        },
+                        "is_human": false,
+                        "member_index": 1,
+                        "__type__": "il2fb.ds.middleware.device_link.structures.MovingAircraftPosition"
+                    },
+                    {
+                        "index": 2,
+                        "id": "g0101",
+                        "pos": {
+                            "x": 66378,
+                            "y": 160822,
+                            "z": 1512
+                        },
+                        "is_human": false,
+                        "member_index": 0,
+                        "__type__": "il2fb.ds.middleware.device_link.structures.MovingAircraftPosition"
+                    },
+                    {
+                        "index": 3,
+                        "id": "g0101",
+                        "pos": {
+                            "x": 66307,
+                            "y": 160823,
+                            "z": 1510
+                        },
+                        "is_human": false,
+                        "member_index": 1,
+                        "__type__": "il2fb.ds.middleware.device_link.structures.MovingAircraftPosition"
+                    },
+                    {
+                        "index": 4,
+                        "id": "john.doe",
+                        "pos": {
+                            "x": 110695,
+                            "y": 202555,
+                            "z": 11
+                        },
+                        "is_human": true,
+                        "member_index": null,
+                        "__type__": "il2fb.ds.middleware.device_link.structures.MovingAircraftPosition"
+                    }
+                ]
+            }
+
+
+``GET_MOVING_GROUND_UNITS_POSITIONS``
+    Get positions of moving ground units.
+
+    Opcode
+        ``54``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 54
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0,
+                "payload": [
+                    {
+                        "index": 0,
+                        "id": "2_Chief",
+                        "member_index": 0,
+                        "pos": {
+                            "x": 99673,
+                            "y": 202473,
+                            "z": 43
+                        },
+                        "__type__": "il2fb.ds.middleware.device_link.structures.MovingGroundUnitPosition"
+                    },
+                    {
+                        "index": 1,
+                        "id": "4_Chief",
+                        "member_index": 0,
+                        "pos": {
+                            "x": 163918,
+                            "y": 204481,
+                            "z": 15
+                        },
+                        "__type__": "il2fb.ds.middleware.device_link.structures.MovingGroundUnitPosition"
+                    },
+                    {
+                        "index": 2,
+                        "id": "4_Chief",
+                        "member_index": 1,
+                        "pos": {
+                            "x": 163928,
+                            "y": 204471,
+                            "z": 14
+                        },
+                        "__type__": "il2fb.ds.middleware.device_link.structures.MovingGroundUnitPosition"
+                    }
+                ]
+            }
+
+
+``GET_ALL_MOVING_ACTORS_POSITIONS``
+    Get positions of all moving actors (aircrafts, ground units and moving
+    ships).
+
+    Opcode
+        ``55``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 55
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0,
+                "payload": {
+                    "aircrafts": [
+                        {
+                            "index": 0,
+                            "id": "I_JG100",
+                            "pos": {
+                                "x": 82480,
+                                "y": 161721,
+                                "z": 1861
+                            },
+                            "is_human": false,
+                            "member_index": 0,
+                            "__type__": "il2fb.ds.middleware.device_link.structures.MovingAircraftPosition"
+                        },
+                        {
+                            "index": 1,
+                            "id": "john.doe",
+                            "pos": {
+                                "x": 110695,
+                                "y": 202554,
+                                "z": 11
+                            },
+                            "is_human": true,
+                            "member_index": null,
+                            "__type__": "il2fb.ds.middleware.device_link.structures.MovingAircraftPosition"
+                        }
+                    ],
+                    "ground_units": [
+                        {
+                            "index": 0,
+                            "id": "2_Chief",
+                            "member_index": 0,
+                            "pos": {
+                                "x": 99903,
+                                "y": 203297,
+                                "z": 41
+                            },
+                            "__type__": "il2fb.ds.middleware.device_link.structures.MovingGroundUnitPosition"
+                        },
+                        {
+                            "index": 1,
+                            "id": "3_Chief",
+                            "member_index": 0,
+                            "pos": {
+                                "x": 88322,
+                                "y": 184137,
+                                "z": 1
+                            },
+                            "__type__": "il2fb.ds.middleware.device_link.structures.MovingGroundUnitPosition"
+                        }
+                    ],
+                    "ships": [
+                        {
+                            "index": 0,
+                            "id": "0_Chief",
+                            "pos": {
+                                "x": 7720,
+                                "y": 140132
+                            },
+                            "is_stationary": false,
+                            "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                        },
+                        {
+                            "index": 1,
+                            "id": "1_Chief",
+                            "pos": {
+                                "x": 35568,
+                                "y": 222874
+                            },
+                            "is_stationary": false,
+                            "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                        }
+                    ],
+                    "__type__": "il2fb.ds.airbridge.radar.AllMovingActorsPositions"
+                }
+            }
+
+
+``GET_ALL_HOUSES_POSITIONS``
+    Get positions of houses.
+
+    Opcode
+        ``56``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 56
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0,
+                "payload": [
+                    {
+                        "index": 0,
+                        "id": "0_bld",
+                        "pos": {
+                            "x": 100184,
+                            "y": 167170
+                        },
+                        "status": {
+                            "name": "alive",
+                            "value": "A"
+                        },
+                        "__type__": "il2fb.ds.middleware.device_link.structures.HousePosition"
+                    },
+                    {
+                        "index": 1,
+                        "id": "1_bld",
+                        "pos": {
+                            "x": 100174,
+                            "y": 167142
+                        },
+                        "status": {
+                            "name": "alive",
+                            "value": "A"
+                        },
+                        "__type__": "il2fb.ds.middleware.device_link.structures.HousePosition"
+                    }
+                ]
+            }
+
+
+``GET_STATIONARY_OBJECTS_POSITIONS``
+    Get positions of stationary objects.
+
+    Opcode
+        ``57``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 57
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0,
+                "payload": [
+                    {
+                        "index": 0,
+                        "id": "0_Static",
+                        "pos": {
+                            "x": 71906,
+                            "y": 178119,
+                            "z": 1
+                        },
+                        "__type__": "il2fb.ds.middleware.device_link.structures.StationaryObjectPosition"
+                    },
+                    {
+                        "index": 1,
+                        "id": "1_Static",
+                        "pos": {
+                            "x": 71616,
+                            "y": 176956,
+                            "z": 1
+                        },
+                        "__type__": "il2fb.ds.middleware.device_link.structures.StationaryObjectPosition"
+                    }
+                ]
+            }
+
+
+``GET_ALL_STATIONARY_ACTORS_POSITIONS``
+    Get positions of all stationary actors (stationary objects, houses and
+    stationary ships).
+
+    Opcode
+        ``58``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 58
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0,
+                "payload": {
+                    "stationary_objects": [
+                        {
+                            "index": 0,
+                            "id": "0_Static",
+                            "pos": {
+                                "x": 71906,
+                                "y": 178119,
+                                "z": 1
+                            },
+                            "__type__": "il2fb.ds.middleware.device_link.structures.StationaryObjectPosition"
+                        },
+                        {
+                            "index": 1,
+                            "id": "1_Static",
+                            "pos": {
+                                "x": 71616,
+                                "y": 176956,
+                                "z": 1
+                            },
+                            "__type__": "il2fb.ds.middleware.device_link.structures.StationaryObjectPosition"
+                        }
+                    ],
+                    "houses": [
+                        {
+                            "index": 0,
+                            "id": "0_bld",
+                            "pos": {
+                                "x": 100184,
+                                "y": 167170
+                            },
+                            "status": {
+                                "name": "alive",
+                                "value": "A"
+                            },
+                            "__type__": "il2fb.ds.middleware.device_link.structures.HousePosition"
+                        },
+                        {
+                            "index": 1,
+                            "id": "1_bld",
+                            "pos": {
+                                "x": 100174,
+                                "y": 167142
+                            },
+                            "status": {
+                                "name": "alive",
+                                "value": "A"
+                            },
+                            "__type__": "il2fb.ds.middleware.device_link.structures.HousePosition"
+                        }
+                    ],
+                    "ships": [
+                        {
+                            "index": 3,
+                            "id": "70_Static",
+                            "pos": {
+                                "x": 43387,
+                                "y": 154521
+                            },
+                            "is_stationary": true,
+                            "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                        },
+                        {
+                            "index": 4,
+                            "id": "72_Static",
+                            "pos": {
+                                "x": 43448,
+                                "y": 152697
+                            },
+                            "is_stationary": true,
+                            "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                        }
+                    ],
+                    "__type__": "il2fb.ds.airbridge.radar.AllStationaryActorsPositions"
+                }
+            }
 
 
 Streaming
