@@ -90,8 +90,13 @@ setup(
     author_email="oblovatniy@gmail.com",
     packages=[
         "il2fb.ds.airbridge",
+        "il2fb.ds.airbridge.api",
+        "il2fb.ds.airbridge.api.http",
+        "il2fb.ds.airbridge.api.http.responses",
+        "il2fb.ds.airbridge.api.http.views",
         "il2fb.ds.airbridge.dedicated_server",
         "il2fb.ds.airbridge.streaming",
+        "il2fb.ds.airbridge.streaming.subscribers",
     ],
     namespace_packages=[
         "il2fb",
