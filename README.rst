@@ -284,6 +284,10 @@ They can have or not have responses depending on their type.
 All requests which interact with dedicated server accept optional parameter
 ``timeout``. It has type ``float`` and is measured in seconds.
 
+In contrast with raw server's communication interfaces, requests API of
+Airbridge provides seamless multiplexing of requests comming from multiple
+clients.
+
 
 REST
 ~~~~
@@ -2597,7 +2601,8 @@ originate from different sources. The following sources are provided:
 #. ``not parsed strings`` — strings coming from game log which were not parsed
    due some error;
 #. ``radar`` — coordinates of all moving actors which are queried periodically
-   and period is specified for each subscriber separatelly.
+   and period is specified for each subscriber separatelly. Default refresh
+   period is ``5 sec``.
 
 Streaming facilities allow subscription of any object which conforms to
 `StreamingSubscriber <https://github.com/IL2HorusTeam/il2fb-ds-airbridge/blob/master/il2fb/ds/airbridge/streaming/subscribers/base.py#L8>`_
@@ -2766,19 +2771,267 @@ streaming destination.
 Files
 ~~~~~
 
-// TODO:
+Airbridge supports streaming of data to local files. In this case every single
+line in text file will contain a message serialized as a single JSON string.
+
+This is the simplest and the fastest streaming subscriber, however it is
+limited to local file system of server.
+
+Events from different streaming facilities must go to different output files.
+
+Streaming to files can be configured to run from start of application.
+
+Refer to "Configuration" section for examples and details.
 
 
 NATS
 ~~~~
 
-// TODO:
+Streaming to NATS channels allows Airbridge to send data to remote storage.
+
+This is one of the key functionalities of Airbridge, as it allows to escape
+server's file system and operating system at all. This also makes it possible
+for multiple remote consumers to subscribe to events in different combinations.
+
+Also NATS streaming server allows to configure persistence of messages, so they
+can be accessed and processed in future.
+
+Each streaming facility can publish messages to its own channel (subject).
+Publishing all messages to a single channel is also possible if needed.
+
+Streaming to NATS channels can be configured to run from start of application.
+
+Refer to "Configuration" section for examples and details.
 
 
 WebSockets
 ~~~~~~~~~~
 
-// TODO:
+Airbridge allows its clients to subscribe to streaming facilities via
+WebSockets.
+
+This means that web application can show data in real time in browser. Such
+feature can be used for building admin dashboards for Airbridge. It's not
+recommended to use this API for displaying data to end users in production, as
+this can affect overall performance of Airbridge.
+
+To start any subscription, a client must connect to streaming endpoint via
+web-socket. This is done by sending ``HTTP GET`` request to ``/streaming``
+route, e.g.:
+
+::
+
+    GET ws://127.0.0.1:5000/streaming
+
+After connection is established, the client can send messages to server to
+subscribe to or unsubscribe from a specific streaming facility.
+
+Like in case of NATS requests API, each request to WS streaming subscription
+API is specified by operation code ``opcode``. Responses have similar structure
+as well: every response contains integer ``status`` field, where ``0`` stands
+for success and ``1`` — for failure.
+
+Subscription requests are described below.
+
+
+``SUBSCRIBE_TO_CHAT``
+    Subscribe to ``chat`` stream.
+
+    Opcode
+        ``0``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 0
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0
+            }
+
+
+``UNSUBSCRIBE_FROM_CHAT``
+    Unsubscribe from ``chat`` stream.
+
+    Opcode
+        ``1``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 1
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0
+            }
+
+
+``SUBSCRIBE_TO_EVENTS``
+    Subscribe to ``events`` stream.
+
+    Opcode
+        ``10``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 10
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0
+            }
+
+
+``UNSUBSCRIBE_FROM_EVENTS``
+    Unsubscribe from ``events`` stream.
+
+    Opcode
+        ``11``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 11
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0
+            }
+
+
+``SUBSCRIBE_TO_NOT_PARSED_STRINGS``
+    Subscribe to ``not parsed strings`` stream.
+
+    Opcode
+        ``20``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 20
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0
+            }
+
+
+``UNSUBSCRIBE_FROM_NOT_PARSED_STRINGS``
+    Unsubscribe from ``not parsed strings`` stream.
+
+    Opcode
+        ``21``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 21
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0
+            }
+
+
+``SUBSCRIBE_TO_RADAR``
+    Subscribe to ``radar`` stream.
+
+    Opcode
+        ``30``
+
+    Parameters
+        ``refresh_period``
+            Refresh period of radar for current subscriber. Measured in
+            seconds. The parameter is optional.
+
+            Type
+                ``float``
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 30,
+                "payload": {
+                    "refresh_period": 30
+                }
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0
+            }
+
+
+``UNSUBSCRIBE_FROM_RADAR``
+    Unsubscribe from ``radar`` stream.
+
+    Opcode
+        ``31``
+
+    Parameters
+        No parameters.
+
+    Request example
+        .. code-block:: json
+
+            {
+                "opcode": 31
+            }
+
+    Response example:
+        .. code-block:: json
+
+            {
+                "status": 0
+            }
 
 
 Installation
