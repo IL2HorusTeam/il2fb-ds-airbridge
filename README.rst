@@ -2586,17 +2586,197 @@ Available NATS requests are listed below along with examples of responses.
 Streaming
 ---------
 
-// TODO:
+As it was stated earlier, Airbridge provides multiple streaming facilities.
+This means that it's possible to subscribe to a stream of events which
+originate from different sources. The following sources are provided:
+
+#. ``chat`` — messages coming from chat. This includes messages from server and
+   system.
+#. ``events`` — events coming from game log and user-connection events coming
+   from server's console;
+#. ``not parsed strings`` — strings coming from game log which were not parsed
+   due some error;
+#. ``radar`` — coordinates of all moving actors which are queried periodically
+   and period is specified for each subscriber separatelly.
+
+Streaming facilities allow subscription of any object which conforms to
+`StreamingSubscriber <https://github.com/IL2HorusTeam/il2fb-ds-airbridge/blob/master/il2fb/ds/airbridge/streaming/subscribers/base.py#L8>`_
+interface.
+
+Those subscribers which conform to `PluggableStreamingSubscriber <https://github.com/IL2HorusTeam/il2fb-ds-airbridge/blob/master/il2fb/ds/airbridge/streaming/subscribers/base.py#L15>`_
+interface, can be created automatically at startup of application.
+`TextFileStreamingSink <https://github.com/IL2HorusTeam/il2fb-ds-airbridge/blob/master/il2fb/ds/airbridge/streaming/subscribers/file.py#L11>`_,
+`JSONFileStreamingSink <https://github.com/IL2HorusTeam/il2fb-ds-airbridge/blob/master/il2fb/ds/airbridge/streaming/subscribers/file.py#L51>`_
+and `NATSStreamingSink <https://github.com/IL2HorusTeam/il2fb-ds-airbridge/blob/master/il2fb/ds/airbridge/streaming/subscribers/nats.py#L17>`_
+are examples of pluggable subscribers. Configuration of such subscribers is
+explained in "Configuration" section.
+
+All streaming data is transmitted as message which are formatted as JSON
+strings. Each message contains a ``timestamp`` which indicates time when event
+was detected and ``data`` which contains event-related data.
+
+..
+
+    **NOTE**: event's timestamp indicates time when event was detected, not
+    the time when it has occured. Usually these times are equal, but there may
+    be a slight difference, for example, for game log events: game log is
+    monitored by polling file with a specific period and events may occur
+    before log watcher will notice them. Moreover, game server may write
+    messages to game log with delay. So, it's better to extract event's time
+    from event's data if it is present and to use ``timestamp`` field as event
+    identifier.
+
+Examples of messages from different streaming facilities are given below.
+
+Message from ``chat`` stream:
+
+.. code-block:: json
+
+    {
+        "timestamp": "2017-11-25T13:22:42.145599",
+        "data": {
+            "body": "john.doe joins the game.",
+            "actor": null,
+            "from_human": false,
+            "from_server": false,
+            "from_system": true,
+            "__type__": "il2fb.ds.middleware.console.events.ChatMessageWasReceived"
+        }
+    }
+
+Message from ``events`` stream:
+
+.. code-block:: json
+
+    {
+        "timestamp": "2017-11-25T15:22:45.211668",
+        "data": {
+            "time": "15:22:44",
+            "actor": {
+                "flight": "g0101",
+                "aircraft": 3
+            },
+            "pos": {
+                "x": 55079.348,
+                "y": 175689.23
+            },
+            "__type__": "il2fb.parsers.game_log.events.AIAircraftHasDespawned"
+        }
+    }
+
+Message from ``not parsed strings`` stream:
+
+.. code-block:: json
+
+    {
+        "timestamp": "2017-11-25T15:19:33.754441",
+        "data": {
+            "value": "[3:19:33 PM] 3do/Tree/Line/live.sim destroyed by 8_Chief at 69716.7 158365.38",
+            "__type__": "il2fb.ds.airbridge.dedicated_server.game_log.NotParsedGameLogString"
+        }
+    }
+
+Message from ``radar`` stream:
+
+.. code-block:: json
+
+    {
+        "timestamp": "2017-11-25T15:50:51.689771",
+        "data": {
+            "aircrafts": [
+                {
+                    "index": 0,
+                    "id": "I_JG100",
+                    "pos": {
+                        "x": 82480,
+                        "y": 161721,
+                        "z": 1861
+                    },
+                    "is_human": false,
+                    "member_index": 0,
+                    "__type__": "il2fb.ds.middleware.device_link.structures.MovingAircraftPosition"
+                },
+                {
+                    "index": 1,
+                    "id": "john.doe",
+                    "pos": {
+                        "x": 110695,
+                        "y": 202554,
+                        "z": 11
+                    },
+                    "is_human": true,
+                    "member_index": null,
+                    "__type__": "il2fb.ds.middleware.device_link.structures.MovingAircraftPosition"
+                }
+            ],
+            "ground_units": [
+                {
+                    "index": 0,
+                    "id": "2_Chief",
+                    "member_index": 0,
+                    "pos": {
+                        "x": 99903,
+                        "y": 203297,
+                        "z": 41
+                    },
+                    "__type__": "il2fb.ds.middleware.device_link.structures.MovingGroundUnitPosition"
+                },
+                {
+                    "index": 1,
+                    "id": "3_Chief",
+                    "member_index": 0,
+                    "pos": {
+                        "x": 88322,
+                        "y": 184137,
+                        "z": 1
+                    },
+                    "__type__": "il2fb.ds.middleware.device_link.structures.MovingGroundUnitPosition"
+                }
+            ],
+            "ships": [
+                {
+                    "index": 0,
+                    "id": "0_Chief",
+                    "pos": {
+                        "x": 7720,
+                        "y": 140132
+                    },
+                    "is_stationary": false,
+                    "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                },
+                {
+                    "index": 1,
+                    "id": "1_Chief",
+                    "pos": {
+                        "x": 35568,
+                        "y": 222874
+                    },
+                    "is_stationary": false,
+                    "__type__": "il2fb.ds.middleware.device_link.structures.ShipPosition"
+                }
+            ],
+            "__type__": "il2fb.ds.airbridge.radar.AllMovingActorsPositions"
+        }
+    }
+
+The subsections below describe different subscribers which can be used as
+streaming destination.
 
 
-WebSockets
-~~~~~~~~~~
+Files
+~~~~~
 
 // TODO:
 
 
 NATS
 ~~~~
+
+// TODO:
+
+
+WebSockets
+~~~~~~~~~~
 
 // TODO:
 
