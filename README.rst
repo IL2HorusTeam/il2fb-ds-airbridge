@@ -3046,7 +3046,86 @@ Each release includes release notes, precompiled binaries and sources.
 Installation
 ============
 
-// TODO:
+This section describes possible ways to install Airbridge application.
+The easiest way is to install from binary which is described below.
+
+
+From binary
+~~~~~~~~~~~
+
+Airbridge comes with precompiled executable binaries which are available at
+releases page (see the section above). Installation is simple and it is done
+just by unpacking executable file from release archive which is suitable for
+target operating system.
+
+
+From PyPI
+~~~~~~~~~
+
+It's also possible to get Airbridge as Python package from PyPI
+(Python Package Index). It is available as `il2fb-ds-airbridge <https://pypi.python.org/pypi?name=il2fb-ds-airbridge&:action=display>`_
+package and can be installed via ``pip``:
+
+.. code-block:: bash
+
+    pip install il2fb-ds-airbridge
+
+Same via ``easy_install``:
+
+.. code-block:: bash
+
+    easy_install il2fb-ds-airbridge
+
+..
+
+    **NOTE**: Airbridge is implemented using Python 3.6, so at least this
+    version must be used to run the application.
+
+
+From sources
+~~~~~~~~~~~~
+
+If neither precompiled version nor package are suitable or
+debugging/development is needed, then Airbridge can be installed from local
+sources.
+
+Sources can be obtained by cloning Git repository or by downloading them from
+releases page.
+
+Usual installation can be done by executing setup script:
+
+.. code-block:: bash
+
+    python ./setup.py install
+
+It is also possible to install application as editable package, so that changes
+in source code will be applied immediately:
+
+.. code-block:: bash
+
+    pip install -e .
+
+
+Manual compilation
+~~~~~~~~~~~~~~~~~~
+
+To compile binary from source one will need to use `PyInstaller <http://www.pyinstaller.org>`_.
+
+Its ``spec`` file is defined as ``airbridge.spec`` at the root of source
+directory. This makes compilation to be very simple:
+
+.. code-block:: bash
+
+    pyinstaller airbridge.spec -y --clean
+
+PyInstaller will create a binary executabe inside ``dist`` directory.
+
+..
+
+    **NOTE**: all dependencies must be installed locally to make it possible to
+    compile a single binary file. Dependencies for Windows are defined at
+    ``requirements/dist-windows.txt`` and dependencies for other platforms are
+    defined at ``requirements/dist.txt``.
 
 
 Configuration
