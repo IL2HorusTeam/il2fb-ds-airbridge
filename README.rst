@@ -3051,7 +3051,7 @@ The easiest way is to install from binary which is described below.
 
 
 From binary
-~~~~~~~~~~~
+-----------
 
 Airbridge comes with precompiled executable binaries which are available at
 releases page (see the section above). Installation is simple and it is done
@@ -3060,7 +3060,7 @@ target operating system.
 
 
 From PyPI
-~~~~~~~~~
+---------
 
 It's also possible to get Airbridge as Python package from PyPI
 (Python Package Index). It is available as `il2fb-ds-airbridge <https://pypi.python.org/pypi?name=il2fb-ds-airbridge&:action=display>`_
@@ -3083,7 +3083,7 @@ Same via ``easy_install``:
 
 
 From sources
-~~~~~~~~~~~~
+------------
 
 If neither precompiled version nor package are suitable or
 debugging/development is needed, then Airbridge can be installed from local
@@ -3107,7 +3107,7 @@ in source code will be applied immediately:
 
 
 Manual compilation
-~~~~~~~~~~~~~~~~~~
+------------------
 
 To compile binary from source one will need to use `PyInstaller <http://www.pyinstaller.org>`_.
 
