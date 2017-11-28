@@ -1,7 +1,7 @@
 IL-2 FB Dedicated Server Airbridge
 ##################################
 
-|pypi_package| |python_versions| |license| |code_climate| |codebeat| |codacy| |scrutinizer|
+|pypi_package| |python_versions| |license| |maintainability| |codebeat| |codacy| |scrutinizer|
 
 |logo|
 
@@ -3089,9 +3089,9 @@ FAQ
    :target: https://github.com/IL2HorusTeam/il2fb-ds-airbridge/blob/master/LICENSE
    :alt: MIT license
 
-.. |code_climate| image:: https://codeclimate.com/github/IL2HorusTeam/il2fb-ds-airbridge/badges/gpa.svg
-   :target: https://codeclimate.com/github/IL2HorusTeam/il2fb-ds-airbridge
-   :alt: Code quality provided by «Code Climate»
+.. |maintainability| image:: https://api.codeclimate.com/v1/badges/d982cd8ce230daba52af/maintainability
+   :target: https://codeclimate.com/github/IL2HorusTeam/il2fb-ds-airbridge/maintainability
+   :alt: Maintainability provided by «Code Climate»
 
 .. |codebeat| image:: https://codebeat.co/badges/82cf3629-2f6b-4a96-8585-c8241455b8e3
    :target: https://codebeat.co/projects/github-com-il2horusteam-il2fb-ds-airbridge-master
