@@ -1,7 +1,7 @@
 IL-2 FB Dedicated Server Airbridge
 ##################################
 
-|python_versions| |license| |code_climate| |codebeat| |codacy| |scrutinizer|
+|pypi_package| |python_versions| |license| |code_climate| |codebeat| |codacy| |scrutinizer|
 
 |logo|
 
@@ -3075,6 +3075,8 @@ Releases
 
 // TODO:
 
+.. |pypi_package| image:: http://img.shields.io/pypi/v/il2fb-ds-airbridge.svg?style=flat
+   :target: https://pypi.python.org/pypi?name=il2fb-ds-airbridge&:action=display
 
 .. |python_versions| image:: https://img.shields.io/badge/Python-3.6-brightgreen.svg?style=flat
    :alt: Supported versions of Python
