@@ -3070,15 +3070,8 @@ FAQ
 // TODO:
 
 
-Development
-===========
-
-// TODO:
-
-
-Changelog
-=========
-
+Releases
+========
 
 // TODO:
 
