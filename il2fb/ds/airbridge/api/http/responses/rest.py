@@ -35,7 +35,7 @@ class RESTResponse(web.Response, abc.ABC):
         if detail:
             payload['detail'] = str(detail)
 
-        indent = 2 if pretty else 0
+        indent = 2 if pretty else None
         text = json.dumps(payload, indent=indent) + '\n'
 
         kwargs.setdefault('status', self.status)
