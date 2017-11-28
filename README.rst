@@ -3034,6 +3034,15 @@ Subscription requests are described below.
             }
 
 
+Releases
+========
+
+Information about project's releases can be found at
+`releases page <https://github.com/IL2HorusTeam/il2fb-ds-airbridge/releases>`_.
+
+Each release includes release notes, precompiled binaries and sources.
+
+
 Installation
 ============
 
@@ -3069,11 +3078,6 @@ FAQ
 
 // TODO:
 
-
-Releases
-========
-
-// TODO:
 
 .. |pypi_package| image:: http://img.shields.io/pypi/v/il2fb-ds-airbridge.svg?style=flat
    :target: https://pypi.python.org/pypi?name=il2fb-ds-airbridge&:action=display
