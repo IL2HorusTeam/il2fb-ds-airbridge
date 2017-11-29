@@ -11,7 +11,7 @@ from il2fb.ds.airbridge.api.http.views.streaming import StreamingView
 
 
 def setup_routes(router: AbstractRouter) -> None:
-    router.add_get('/health', misc.get_health)
+    router.add_get('/', misc.get_health)
     router.add_get('/info', misc.get_server_info)
     router.add_get('/streaming', StreamingView)
 

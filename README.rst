@@ -303,7 +303,7 @@ indents. This can be useful for debugging.
 
 Timeouts are passed as query parameters also, e.g.: ``/info?timeout=3``
 
-``GET /health``
+``GET /``
     Check status of Airbridge and dedicated server. Can be useful for health
     checking and failure detection with tools like
     `Consul <https://www.consul.io>`_.
