@@ -298,7 +298,7 @@ which are available over HTTP.
 Bodies of POST requests and responses of all requests are formatted as JSON.
 
 All endpoints accept optional ``pretty`` query parameter. For example:
-``/health?pretty``. It tells endpoints to make "pretty" output by adding
+``/info?pretty``. It tells endpoints to make "pretty" output by adding
 indents. This can be useful for debugging.
 
 Timeouts are passed as query parameters also, e.g.: ``/info?timeout=3``
