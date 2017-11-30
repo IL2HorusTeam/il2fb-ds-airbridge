@@ -3118,7 +3118,7 @@ directory. This makes compilation to be very simple:
 
     pyinstaller airbridge.spec -y --clean
 
-PyInstaller will create a binary executabe inside ``dist`` directory.
+PyInstaller will create a binary executable inside ``dist`` directory.
 
 ..
 
@@ -3131,11 +3131,541 @@ PyInstaller will create a binary executabe inside ``dist`` directory.
 Configuration
 =============
 
-// TODO:
+This section describes how Airbridge can be configured.
+
+Airbridge application requires a configuration file to operate. This
+requirement comes out of application's nature: it is a wrapper of dedicated
+server, so it needs to know at least were server's executable file is located.
+
+Application's configuration has hierarchical structure and is stored as a YAML
+file. The following subsections describe different aspects of configuration.
+
+Full example of configuration file `can be found in examples directory <https://github.com/IL2HorusTeam/il2fb-ds-airbridge/tree/master/examples>`_.
 
 
-Security
-========
+Logging
+-------
+
+Logging is critical for detection and localization of issues and errors. As
+errors can occur at any stage of application execution, it is important to
+configure it in the first place.
+
+Airbridge produces 2 log files: a main log file which records application's
+execution flow and a separate file for dumping tracebacks of exceptions.
+
+Let's take a look at configuration of logging which is used by default:
+
+.. code-block:: yaml
+
+    logging:
+      files:
+        main:
+          level: debug
+          file_path: airbridge.log
+          keep_after_restart: yes
+          is_delayed: no
+        exceptions:
+          file_path: airbridge.exc
+          keep_after_restart: yes
+          is_delayed: no
+      rotation:
+          is_enabled: yes
+          max_size: 10485760
+          max_backups: 10
+      trace: no
+      encoding: utf8
+      use_local_time: no
+
+
+Files
+~~~~~
+
+``files`` section defines options for two log files. The options are the same
+for both of them, except ``level`` option which can be specified only for
+``main`` file. Description of all options is given below.
+
+``level``
+    Logging level for ``main`` file. Can be one of: ``debug``, ``info``,
+    ``warning``, ``error`` or ``critical``.
+
+    Logging level for ``exceptions`` file is always set to ``debug``, so that
+    tracebacks from any level can be captured. Usually tracebacks are logged
+    with log message of ``error`` level, however they are not limited to it.
+    For example, warning messages also can include tracebacks.
+
+``file_path``
+    Path to a file where log will be stored.
+
+``keep_after_restart``
+    Tells whether existing log file should be retained after restart of
+    application or a clean one should be created.
+
+``is_delayed``
+    Tells whether file should be created only after a first message is written
+    to it or it should be created immediately after start of application.
+
+
+Rotation
+~~~~~~~~
+
+Rotation of log files allows to keep their size under acceptable limit. After
+file size reaches this limit it is backed up and new empty log file is created.
+
+By default rotation is enabled and size limit for a single file is set to
+10'485'760 bytes (10 MiB). This feature can be disabled and external tools
+like `logrotate <https://linux.die.net/man/8/logrotate>`_ can be used instead.
+
+``is_enabled``
+    Tells whether rotation is turned on.
+
+``max_size``
+    Size limit for a single file.
+
+``max_backups``
+    Number of backups which are stored in file system before application will
+    start to delete old backups. For example, if ``max_backups`` is set to 10
+    and there are already 10 backups exist, then when file size of log reaches
+    its ``max_size`` limit, the oldest existing backup will be erased and a new
+    one will be created.
+
+
+Other options
+~~~~~~~~~~~~~
+
+Other available logging options are listed below.
+
+``trace``
+    Tells whether tracing level of logging is enabled. Tracing messages are
+    logged with ``debug`` level usually (but not limited to it), so it must be
+    set as value for ``level`` option for main log file.
+
+``encoding``
+    Encoding of log files to use.
+
+``use_local_time``
+    Tells whether local timezone or UTC should be used in log messages.
+
+
+Daemonization
+-------------
+
+By default Airbridge connects its terminal channels (STDIN, STDOUT and STDERR)
+to terminal channels channels of dedicated server as it is shown in
+"Architecture Overview" section. Such approach allows Airbridge to sit in the
+middle of user-server communication and filter data.
+
+If application is going to be run as a background service or inside a
+virtualization container like Docker and interactive communication with server
+is not needed then it can be turned off by setting ``daemon`` option to ``yes``
+value.
+
+``daemon``
+    Tells whether Airbridge will be running without ability of user to interact
+    with server via its shell: no input prompt and no output.
+
+
+Example of config with default value:
+
+.. code-block:: yaml
+
+    daemon: no
+
+
+State persistence
+-----------------
+
+Airbridge is designed with ability of its components to store their internal
+state so that it can be restored back during next run. For example, monitor of
+game log needs to know where it was stopped so that monitoring can be resumed
+from the right place to avoid duplication or omission of game events.
+
+State is stored as a file in YAML format, so it can be easily inspected by
+humans. Its location is configurable and default configuration is presented
+below.
+
+.. code-block:: yaml
+
+    state:
+      file_path: airbridge.state
+
+Current configuration is very simple and its options are described below.
+
+``file_path``
+    Path to a file where application's state will be stored.
+
+
+Dedicated server
+----------------
+
+This section decribes config options which are used to locate and run an
+instance of dedicated server.
+
+Default configuration looks as following:
+
+.. code-block:: yaml
+
+    ds:
+      exe_path: C:\\il2ds\il2server.exe
+      config_path:
+      start_script_path:
+      wine_bin_path: wine
+      console_proxy:
+        bind:
+          address: localhost
+          port: 20001
+      device_link_proxy:
+        bind:
+          address: localhost
+          port: 10001
+
+
+Description of options is given below.
+
+
+Primary options
+~~~~~~~~~~~~~~~
+
+``exe_path``
+    Path to ``il2server.exe`` executable file.
+
+``config_path``
+    Optional path to server's config. By default it is ``confs.ini`` which is
+    located at server's root directory.
+
+``start_script_path``
+    Optional path to server's start script. By default it is ``server.cmd`` which is
+    located at server's root directory.
+
+``wine_bin_path``
+    Custom path to `Wine <https://www.winehq.org>`_ executable. Applicable only
+    when running server on Linux or Mac OS.
+
+    ..
+
+        **NOTE**: on Mac OS ``wine`` executable can be just a shell script
+        which wraps invocation of real executable. For example
+
+        .. code-block:: bash
+
+            /usr/local/bin/wine
+
+        can be just a wrapper around
+
+        .. code-block:: bash
+
+            /usr/local/Cellar/wine/1.6.2/bin/wine.bin
+
+        In such case the latter one must be used as value of ``wine_bin_path``.
+
+
+Console proxy
+~~~~~~~~~~~~~
+
+As it was told earlier, console proxy allows existing applications to
+communicate with dedicated server using their existing implementations of
+console clients.
+
+By default it is turned off.
+
+``console_proxy.bind.address``
+    Address for console proxy to listen for incoming connections on.
+
+``console_proxy.bind.port``
+    Port for console proxy to listen for incoming connections on.
+
+
+Device Link proxy
+~~~~~~~~~~~~~~~~~
+
+Just like in case of console proxy, Device Link allows existing applications to
+communicate with dedicated server using their existing implementations of
+Device Link clients.
+
+..
+
+    **NOTE**: Despite Device Link works on top of UDP and dedicated server is
+    able to handle requests from multiple clients, it's strongly recommended
+    for them to use proxy, as proxy allows multiplexing of requests and
+    controls their execution flow.
+
+By default Device Link proxy is turned off.
+
+``device_link_proxy.bind.address``
+    Address for Device Link proxy to listen for incoming connections on.
+
+``device_link_proxy.bind.port``
+    Port for Device Link proxy to listen for incoming connections on.
+
+
+NATS
+----
+
+As NATS can be used for both API and streaming, it has own configuration
+section.
+
+By default NATS API and streaming are turned off, so this section should be
+configured only if at least one of them is going to be used.
+
+Full example of configuration:
+
+.. code-block:: yaml
+
+    nats:
+      servers:
+        - nats://your.domain:4222
+      streaming:
+        cluster_id: your-cluster-id
+        client_id: your-client-id
+
+
+Description of shown options is given below.
+
+``servers``
+    List of server addresses to connect to.
+    `See NATS client's documentation <https://github.com/nats-io/asyncio-nats#clustered-usage>`_
+    for details.
+
+    Required if either NATS API or streaming is going to be used.
+
+``streaming.cluster_id``
+    ID of cluster to connect to. Cluster ID is defined at NATS server side.
+    `See streaming server's documentation <https://github.com/nats-io/nats-streaming-server#clustering>`_
+    for details.
+
+    Required only if NATS streaming is going to be used.
+
+``streaming.client_id``
+    Unique client ID for a given cluster. It is defined by Airbridge user
+    usually. `See streaming server's documentation <https://github.com/nats-io/nats-streaming-server#client-connections>`_
+    for details.
+
+    Required only if NATS streaming is going to be used.
+
+
+API
+---
+
+API section is used to configure NATS and HTTP APIs. By default APIs are turned
+off.
+
+Full example of configuration looks as following:
+
+.. code-block:: yaml
+
+    api:
+      nats:
+        subject: airbridge-cmd
+      http:
+        bind:
+          address: localhost
+          port: 5000
+        auth:
+          token_header_name: X-Airbridge-Token
+          token_storage_path: airbridge.tokens
+        cors:
+          "your.trusted.domain":
+            expose_headers:
+              - X-Custom-Server-Header
+            allow_headers:
+              - X-Requested-With
+              - Content-Type
+            max_age: 600
+
+
+NATS
+~~~~
+
+It's enough to configure ``nats.servers`` and ``api.nats.subject`` to enable
+NATS API. This will tell Airbridge to subscribe to a given subject on a given
+set of servers to listen for incoming requests.
+
+
+HTTP
+~~~~
+
+HTTP API includes both REST API and streaming via WebSockets. This subsection
+describes configuration options for them.
+
+Minimal configuration requires ``http.bind.port`` option to be specified to
+enable HTTP API.
+
+
+Binding
+"""""""
+
+Airbridge must be bound to a specific network location to allow clients to
+connect to it.
+
+``http.bind.address``
+    Address to listen for incoming HTTP requests on.
+
+    Default value is ``localhost``.
+
+``http.bind.port``
+    Post to listen for incoming HTTP requests on.
+
+
+Authorization options
+"""""""""""""""""""""
+
+It's possibe to enable authorization for HTTP requests. This is done by
+requiring client to provide an API token which is known only to server and
+client. Tokens are passed to Airbridge via HTTP headers.
+
+API tokens are just strings which are encoded with
+`base64 algorithm <https://docs.python.org/3/library/base64.html>`_. They
+can contain any information and it's OK to use random data. Decision on length
+of tokens is up to server administrator.
+
+Encoding to ``base64`` can be done, for example, by
+`base64 <https://linux.die.net/man/1/base64>`_ utility, or by running
+``openssl enc -base64`` command, or by using Python's
+`base64.b64encode() <https://docs.python.org/3/library/base64.html#base64.b64encode>`_
+function.
+
+It's possible to generate random and encoded token just by using output from
+``/dev/urandom`` device with ``base64`` utility. For example:
+
+.. code-block:: bash
+
+    cat /dev/urandom | head -c 48 | base64
+
+This will produce a random encoded token with length of 48 characters.
+
+Options below describe how to configure authorization via tokens.
+
+``http.auth.token_header_name``
+    Name of HTTP header to look for token at.
+
+    Default value is ``X-Airbridge-Token``.
+
+``http.auth.token_storage_path``
+    Path to a text file with allowed tokens. Each line represents a single
+    token. Multiple tokens can be allowed.
+
+
+CORS options
+""""""""""""
+
+Cross Origin Resource Sharing can be enabled for HTTP API if needed.
+Implementation is provided by `aiohttp-cors library <https://github.com/aio-libs/aiohttp-cors>`_.
+Options from ``http.cors`` config section are passed to that library as-is.
+Please, refer to `library's documentation <https://github.com/aio-libs/aiohttp-cors#usage>`_
+for more information.
+
+
+Streaming
+---------
+
+It's possible to configure static streaming subscribers for each streaming
+facility separately. By default no subscribers are defined.
+
+All streaming facilities expect ``subscribers`` to be defined for them. Some
+facilities like ``radar`` may allow definition of extra options for the whole
+facility (e.g., ``request_timeout``).
+
+``subscribers`` option defines a dictionary of subscribers of different types.
+Each type of subscribers can accept its own set of arguments for
+initialization. This includes, for example, path to output file or name of
+a NATS channel. Such initialization options are defined by ``args`` dictionary
+which is specific for each subscriber.
+
+Additionally, each subscriber can define additional subscription options for
+different facilities. For example, subscribers of ``radar`` facility may
+specify custom ``refresh_period``. Such options are defined via
+``subscription_options`` parameter.
+
+The configuration example below shows all options which can be used to
+configure streaming subscribers.
+
+..
+
+    **NOTE**: it is not necessary to define all kinds of subscribers: it may be
+    enough to define only few of them depending on the needs. Other definitions
+    `can be found in examples directory <https://github.com/IL2HorusTeam/il2fb-ds-airbridge/tree/master/examples>`_.
+
+.. code-block:: yaml
+
+    streaming:
+      chat:
+        subscribers:
+          file:
+            args:
+              path: streaming/chat.log
+          nats:
+            args:
+              subject: chat
+      events:
+        subscribers:
+          file:
+            args:
+              path: streaming/events.log
+          nats:
+            args:
+              subject: events
+      not_parsed_strings:
+        subscribers:
+          file:
+            args:
+              path: streaming/not_parsed_strings.log
+          nats:
+            args:
+              subject: not-parsed-strings
+      radar:
+        request_timeout: 5
+        subscribers:
+          file:
+            args:
+              path: streaming/radar.log
+            subscription_options:
+              refresh_period: 5
+          nats:
+            args:
+              subject: radar
+            subscription_options:
+              refresh_period: 5
+
+
+Subscribers
+~~~~~~~~~~~
+
+Description of subscriber types with their initialization arguments is given
+below.
+
+
+``file``
+    File subscriber which puts messages to JSON text file, 1 line per single
+    message.
+
+    Args:
+
+    ``path``
+        Path to output file.
+
+
+``nats``
+    NATS subscriber which publishes messages to NATS subject (channel).
+
+    Args:
+
+    ``subject``
+        Name of NATS subject to publish messages to.
+
+
+Facilities
+~~~~~~~~~~
+
+``chat``, ``events`` and ``not_parsed_strings`` facilities are similar from
+configurational point of view and do not have extra options.
+
+On the other hand, ``radar`` facility accepts ``request_timeout`` option which
+sets timeout in seconds for Device Link requests. By default there is no
+timeout. Additionally, ``radar`` allows to set custom ``refresh_period`` in
+seconds for each subscriber via ``subscription_options`` parameter.
+
+
+Security considerations
+=======================
 
 // TODO:
 
