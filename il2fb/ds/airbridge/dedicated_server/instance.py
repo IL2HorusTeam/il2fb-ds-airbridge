@@ -152,7 +152,7 @@ class DedicatedServer:
         exe_path: str,
         start_script_path: str=None,
         config_path: str=None,
-        wine_bin_path: str="wine",
+        wine_bin_path: str=None,
         stdout_handler: StringHandler=None,
         stderr_handler: StringHandler=None,
         prompt_handler: StringHandler=None,
@@ -180,7 +180,7 @@ class DedicatedServer:
         self.config = _try_to_load_config(self.config_path)
         validate_dedicated_server_config(self.config)
 
-        self._wine_bin_path = wine_bin_path
+        self._wine_bin_path = wine_bin_path or "wine"
 
         self.game_log_path = Path(self.config.events.logging.file_name)
         if not self.game_log_path.is_absolute():
