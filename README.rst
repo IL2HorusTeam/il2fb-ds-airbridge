@@ -3664,14 +3664,103 @@ timeout. Additionally, ``radar`` allows to set custom ``refresh_period`` in
 seconds for each subscriber via ``subscription_options`` parameter.
 
 
-Security considerations
-=======================
+Security
+========
 
-// TODO:
+This section is covering resolution of possible security pitfalls which might
+arise while using Airbridge and bare Dedicated Server.
+
+
+Securing dedicated server
+-------------------------
+
+It's worth noting that Dedicated Server must be secured no matter of what:
+whether it runs with or without Airbridge, under control of other software or
+in a stand-alone mode. As Dedicated Server exposes console and Device Link to
+the outer world, access to them must be restricted.
+
+So, two techniques must be applied. First of all, list of allowed hosts must
+be explicitly set for both console and Device Link. This is done by setting
+``IPS`` value for `[Console] <https://github.com/IL2HorusTeam/il2fb-ds-config#console-section>`_
+and `[DeviceLink] <https://github.com/IL2HorusTeam/il2fb-ds-config#devicelink-section>`_
+sections of server's config file. Preferred value is ``127.0.0.1`` or
+``localhost``. This with ensure that connections coming from other machines
+will be blocked.
+
+Next, it's good to be sure that unwanted connections will be not only blocked
+but impossible at all. This can be achieved by explicit binding of connection
+listeners to localhost.
+
+As for Device Link, this can be easily done by setting ``localhost`` as value
+for ``host`` option in ``[DeviceLink]`` section of server's config.
+
+As for console, this cannot be done, as console is bound to the same address
+which is used for incoming connections from players.
+
+Configuration of dedicated server may be tricky and misleading sometimes, so
+it's recommended to use `config editor <https://il2horusteam.github.io/il2fb-ds-config/>`_
+for this purpose. Visit ``Connection``, ``Console`` and ``Device link`` tabs
+to edit described values.
+
+
+Securing Airbridge
+------------------
+
+Airbridge exposes control over dedicated server to the outer world by design
+purposely, so extra security care must be taken of it. Access must be as scrict
+as possibe.
+
+Sensitive posints:
+
+- HTTP API.
+- Connection with NATS: from server to NATS and from NATS to clients.
+
+
+Securing HTTP API
+~~~~~~~~~~~~~~~~~
+
+Both HTTP and NATS API provide interface for managing server's state and for
+message subscription. However, HTTP API provides access to server's mission
+storage which is a usual directory is server's file system. So, control over
+files in ``Mission`` directory is exposed also.
+
+Access to HTTP API can be resctricted by using access tokens, as it is
+described in configuration section. However, implementation is rather naïve
+and it has a lot of place for imrovements. Nevertheless, Airbridge is designed
+mainly as an interlayer between dedicated servers and server commanders, so
+its API is not expected to be exposed to public networks.
+
+Another thing which is strongly recommended to do is to allow access to
+Airbridge via HTTPS only. This is beyond scope of this documentation. For
+example, HTTP API can be bound to local host and requests to it can be proxied
+by Nginx with configured support of TLS. This is the most preferred approach.
+
+
+Securing connection with NATS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+NATS server is expected to be remote in respect to dedicated server. It has its
+own optional authorization mechanisms and it can run over TLS. See
+`security documentation for NATS streaming server <https://github.com/nats-io/nats-streaming-server#securing>`_
+and `security documentation for bare NATS server <https://github.com/nats-io/gnatsd#securing-nats>`_.
+
+Enabling TLS for server with requirement for its clients to use TLS and
+enabling validation of clients' certificates would act as a pretty good
+solution. However, there are very tricky issues with TLS connection to NATS
+server. It is probably caused by implementation issues inside
+`asyncio-nats <https://github.com/nats-io/asyncio-nats>`_ client or inside
+`asyncio <https://docs.python.org/3/library/asyncio.html>`_ library, however,
+currently its hard to tell what is the reason of that. As a solution, it's
+possible to setup a VPN for communication with NATS.
 
 
 Usage
 =====
+
+// TODO:
+
+Preconditions
+-------------
 
 // TODO:
 
