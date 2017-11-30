@@ -13,9 +13,6 @@ CONFIG_SCHEMA = {
         'daemon': {
             'type': 'boolean',
         },
-        'wine_bin_path': {
-            'type': 'string',
-        },
         'state': {
             'type': 'object',
             'properties': {
@@ -35,6 +32,9 @@ CONFIG_SCHEMA = {
                     'type': 'string',
                 },
                 'start_script_path': {
+                    'type': 'string',
+                },
+                'wine_bin_path': {
                     'type': 'string',
                 },
                 'console_proxy': {
@@ -417,13 +417,12 @@ CONFIG_SCHEMA = {
             },
         },
     },
-    'required': ['wine_bin_path', 'state', 'ds', ],
+    'required': ['state', 'ds', ],
 }
 
 
 CONFIG_DEFAULTS = {
     'daemon': False,
-    'wine_bin_path': 'wine',
     'state': {
         'file_path': 'airbridge.state',
     },

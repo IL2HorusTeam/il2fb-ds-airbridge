@@ -198,7 +198,7 @@ def run_main(config: ServerConfig, state: DotAccessDict, trace: bool) -> None:
         exe_path=config.ds.exe_path,
         config_path=config.ds.get('config_path'),
         start_script_path=config.ds.get('start_script_path'),
-        wine_bin_path=config.wine_bin_path,
+        wine_bin_path=config.ds.get('wine_bin_path'),
     )
 
     if not config.daemon:
