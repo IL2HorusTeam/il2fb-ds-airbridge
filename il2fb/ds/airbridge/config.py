@@ -10,6 +10,70 @@ from jsonschema import validate
 CONFIG_SCHEMA = {
     'type': 'object',
     'properties': {
+        'logging': {
+            'type': 'object',
+            'properties': {
+                'trace': {
+                    'type': 'boolean',
+                },
+                'files': {
+                    'type': 'object',
+                    'properties': {
+                        'main': {
+                            'type': 'object',
+                            'properties': {
+                                'file_path': {
+                                    'type': 'string',
+                                },
+                                'keep_after_restart': {
+                                    'type': 'boolean',
+                                },
+                                'is_delayed': {
+                                    'type': 'boolean',
+                                },
+                                'level': {
+                                    'type': 'string',
+                                },
+                            },
+                        },
+                        'exceptions': {
+                            'type': 'object',
+                            'properties': {
+                                'file_path': {
+                                    'type': 'string',
+                                },
+                                'keep_after_restart': {
+                                    'type': 'boolean',
+                                },
+                                'is_delayed': {
+                                    'type': 'boolean',
+                                },
+                            },
+                        },
+                        'rotation': {
+                            'type': 'object',
+                            'properties': {
+                                'is_enabled': {
+                                    'type': 'boolean',
+                                },
+                                'max_size': {
+                                    'type': 'integer',
+                                },
+                                'max_backups': {
+                                    'type': 'integer',
+                                },
+                            },
+                        },
+                        'encoding': {
+                            'type': 'string',
+                        },
+                        'use_local_time': {
+                            'type': 'boolean',
+                        },
+                    },
+                },
+            },
+        },
         'daemon': {
             'type': 'boolean',
         },
@@ -148,70 +212,6 @@ CONFIG_SCHEMA = {
                         },
                     },
                     'required': ['bind', ],
-                },
-            },
-        },
-        'logging': {
-            'type': 'object',
-            'properties': {
-                'trace': {
-                    'type': 'boolean',
-                },
-                'files': {
-                    'type': 'object',
-                    'properties': {
-                        'main': {
-                            'type': 'object',
-                            'properties': {
-                                'file_path': {
-                                    'type': 'string',
-                                },
-                                'keep_after_restart': {
-                                    'type': 'boolean',
-                                },
-                                'is_delayed': {
-                                    'type': 'boolean',
-                                },
-                                'level': {
-                                    'type': 'string',
-                                },
-                            },
-                        },
-                        'exceptions': {
-                            'type': 'object',
-                            'properties': {
-                                'file_path': {
-                                    'type': 'string',
-                                },
-                                'keep_after_restart': {
-                                    'type': 'boolean',
-                                },
-                                'is_delayed': {
-                                    'type': 'boolean',
-                                },
-                            },
-                        },
-                        'rotation': {
-                            'type': 'object',
-                            'properties': {
-                                'is_enabled': {
-                                    'type': 'boolean',
-                                },
-                                'max_size': {
-                                    'type': 'integer',
-                                },
-                                'max_backups': {
-                                    'type': 'integer',
-                                },
-                            },
-                        },
-                        'encoding': {
-                            'type': 'string',
-                        },
-                        'use_local_time': {
-                            'type': 'boolean',
-                        },
-                    },
                 },
             },
         },
@@ -422,10 +422,6 @@ CONFIG_SCHEMA = {
 
 
 CONFIG_DEFAULTS = {
-    'daemon': False,
-    'state': {
-        'file_path': 'airbridge.state',
-    },
     'logging': {
         'trace': False,
         'files': {
@@ -448,6 +444,10 @@ CONFIG_DEFAULTS = {
             'encoding': 'utf8',
             'use_local_time': False,
         },
+    },
+    'daemon': False,
+    'state': {
+        'file_path': 'airbridge.state',
     },
 }
 
