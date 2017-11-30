@@ -134,11 +134,11 @@ CONFIG_SCHEMA = {
                         'auth': {
                             'type': 'object',
                             'properties': {
-                                'token_storage_path': {
+                                'token_header_name': {
                                     'format': 'string',
                                 },
-                                'address': {
-                                    'token_header_name': 'string',
+                                'token_storage_path': {
+                                    'format': 'string',
                                 },
                             },
                             'required': ['token_storage_path', ],
