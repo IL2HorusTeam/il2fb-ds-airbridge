@@ -1,6 +1,8 @@
 # coding: utf-8
 
+import base64
 import functools
+import logging
 
 from typing import Optional
 
@@ -10,6 +12,9 @@ from aiohttp import web
 
 from il2fb.ds.airbridge.api.http.constants import DEFAULT_AUTH_TOKEN_HEADER_NAME
 from il2fb.ds.airbridge.typing import StringOrPath
+
+
+LOG = logging.getLogger(__name__)
 
 
 def setup_cors(app: web.Application, options: dict) -> None:
@@ -38,11 +43,20 @@ class AuthorizationBackend:
             tokens = f.readlines()
             tokens = map(str.strip, tokens)
             tokens = filter(bool, tokens)
+            tokens = map(base64.b64decode, tokens)
             self._token_storage = set(tokens)
 
     def authorize(self, request: web.Request) -> bool:
-        token = request.headers.get(self._token_header_name)
-        return bool(token) and (token in self._token_storage)
+        try:
+            token = request.headers.get(self._token_header_name)
+            if not token:
+                return False
+
+            token = base64.b64decode(token)
+            return token in self._token_storage
+        except Exception:
+            LOG.exception("failed to perform request authorization")
+            return False
 
 
 def setup_authorization(
