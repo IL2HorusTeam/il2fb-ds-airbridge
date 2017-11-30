@@ -1,0 +1,6 @@
+ds:
+  exe_path: /il2ds/il2server.exe
+api:
+  http:
+    bind:
+      port: 5000

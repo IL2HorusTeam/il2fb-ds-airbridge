@@ -1,0 +1,25 @@
+ds:
+  exe_path: /il2ds/il2server.exe
+streaming:
+  chat:
+    subscribers:
+      file:
+        args:
+          path: /var/log/il2ds/streaming/chat
+  events:
+    subscribers:
+      file:
+        args:
+          path: /var/log/il2ds/streaming/events
+  not_parsed_strings:
+    subscribers:
+      file:
+        args:
+          path: /var/log/il2ds/streaming/not_parsed_strings
+  radar:
+    subscribers:
+      file:
+        args:
+          path: /var/log/il2ds/streaming/radar
+        subscription_options:
+          refresh_period: 30

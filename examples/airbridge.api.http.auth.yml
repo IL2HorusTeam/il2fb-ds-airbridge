@@ -1,0 +1,9 @@
+ds:
+  exe_path: /il2ds/il2server.exe
+api:
+  http:
+    bind:
+      port: 5000
+    auth:
+      token_header_name: X-Airbridge-Token
+      token_storage_path: /etc/il2ds/airbridge.tokens

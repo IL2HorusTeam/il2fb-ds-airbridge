@@ -1,0 +1,10 @@
+ds:
+  exe_path: /il2ds/il2server.exe
+logging:
+  trace: no
+  files:
+    main:
+      level: debug
+      file_path: /var/log/il2ds/airbridge.log
+    exceptions:
+      file_path: /var/log/il2ds/airbridge.exc

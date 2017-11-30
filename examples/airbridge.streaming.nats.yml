@@ -1,0 +1,31 @@
+ds:
+  exe_path: /il2ds/il2server.exe
+nats:
+  servers:
+    - nats://your.domain:4222
+  streaming:
+    cluster_id: your-cluster-id
+    client_id: your-client-id
+streaming:
+  chat:
+    subscribers:
+      nats:
+        args:
+          subject: chat
+  events:
+    subscribers:
+      nats:
+        args:
+          subject: events
+  not_parsed_strings:
+    subscribers:
+      nats:
+        args:
+          subject: not-parsed-strings
+  radar:
+    subscribers:
+      nats:
+        args:
+          subject: radar
+        subscription_options:
+          refresh_period: 30

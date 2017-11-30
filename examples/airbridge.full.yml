@@ -1,0 +1,96 @@
+logging:
+  files:
+    main:
+      level: debug
+      file_path: /var/log/il2ds/airbridge.log
+      keep_after_restart: yes
+      is_delayed: no
+    exceptions:
+      file_path: /var/log/il2ds/airbridge.exc
+      keep_after_restart: yes
+      is_delayed: no
+  rotation:
+      is_enabled: yes
+      max_size: 10485760
+      max_backups: 10
+  trace: no
+  encoding: utf8
+  use_local_time: no
+daemon: no
+state:
+  file_path: /var/run/il2ds/airbridge.state
+ds:
+  exe_path: /il2ds/il2server.exe
+  config_path: /etc/il2ds/confs.ini
+  start_script_path: /etc/il2ds/server.cmd
+  wine_bin_path: wine
+  console_proxy:
+    bind:
+      address: localhost
+      port: 20001
+  device_link_proxy:
+    bind:
+      address: localhost
+      port: 10001
+nats:
+  servers:
+    - nats://your.domain:4222
+  streaming:
+    cluster_id: your-cluster-id
+    client_id: your-client-id
+api:
+  nats:
+    subject: airbridge-cmd
+  http:
+    bind:
+      address: localhost
+      port: 5000
+    auth:
+      token_header_name: X-Airbridge-Token
+      token_storage_path: /etc/il2ds/airbridge.tokens
+    cors:
+      "your.trusted.domain":
+        expose_headers:
+          - X-Custom-Server-Header
+        allow_headers:
+          - X-Requested-With
+          - Content-Type
+        max_age: 600
+streaming:
+  chat:
+    subscribers:
+      file:
+        args:
+          path: /var/log/il2ds/streaming/chat
+      nats:
+        args:
+          subject: chat
+  events:
+    subscribers:
+      file:
+        args:
+          path: /var/log/il2ds/streaming/events
+      nats:
+        args:
+          subject: events
+  not_parsed_strings:
+    subscribers:
+      file:
+        args:
+          path: /var/log/il2ds/streaming/not_parsed_strings
+      nats:
+        args:
+          subject: not-parsed-strings
+  radar:
+    request_timeout: 3
+    subscribers:
+      file:
+        args:
+          path: /var/log/il2ds/streaming/radar
+        subscription_options:
+          subscription_options: 30
+      nats:
+        args:
+          subject: radar
+        subscription_options:
+          refresh_period: 30

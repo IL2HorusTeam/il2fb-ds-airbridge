@@ -1,0 +1,17 @@
+ds:
+  exe_path: /il2ds/il2server.exe
+nats:
+  servers:
+    - nats://your.domain:4222
+  streaming:
+    cluster_id: your-cluster-id
+    client_id: your-client-id
+streaming:
+  events:
+    subscribers:
+      file:
+        args:
+          path: /var/log/il2ds/streaming/events
+      nats:
+        args:
+          subject: events

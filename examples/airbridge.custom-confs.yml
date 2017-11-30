@@ -1,0 +1,3 @@
+ds:
+  exe_path: /il2ds/il2server.exe
+  config_path: /etc/il2ds/confs.ini

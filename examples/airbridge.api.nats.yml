@@ -1,0 +1,8 @@
+ds:
+  exe_path: /il2ds/il2server.exe
+nats:
+  servers:
+    - nats://your.domain:4222
+api:
+  nats:
+    subject: airbridge-cmd

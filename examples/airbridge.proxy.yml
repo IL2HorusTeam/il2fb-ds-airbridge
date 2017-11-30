@@ -1,0 +1,8 @@
+ds:
+  exe_path: /il2ds/il2server.exe
+  console_proxy:
+    bind:
+      port: 20001
+  device_link_proxy:
+    bind:
+      port: 10001
