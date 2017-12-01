@@ -3851,10 +3851,10 @@ FAQ
 #. On which operating systems Airbridge can run?
        Airbridge was tested on Windows (7, 10, Server 2008), Linux and macOS.
 
-       .. image:: ./docs/Runtime.png
-          :alt: Runtime example
-          :align: center
-          :height: 400
+       .. raw:: html
+
+           <img src="./docs/Runtime.png" height="400px">
+
 
 .. |pypi_package| image:: http://img.shields.io/pypi/v/il2fb-ds-airbridge.svg?style=flat
    :target: https://pypi.python.org/pypi?name=il2fb-ds-airbridge&:action=display
