@@ -3830,6 +3830,7 @@ were already described in this text just to give an extra emphasis on them.
 #. ``wine`` must be installed to run dedicated server on Linux or macOS.
 #. Path to ``wine.bin`` must be configured by ``wine_bin_path`` when running on
    macOS.
+#. Config file must be create before runnsing Airbridge.
 #. Access to HTTP API should be granted only to authorized clients.
 #. If HTTP API is exposed to the outer world if must be secured and run over
    HTTPS.
