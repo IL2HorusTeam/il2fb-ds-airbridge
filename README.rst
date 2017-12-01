@@ -3306,8 +3306,8 @@ Default configuration looks as following:
 
     ds:
       exe_path: C:\\il2ds\il2server.exe
-      config_path:
-      start_script_path:
+      config_path: C:\\il2ds\confs.ini
+      start_script_path: C:\\il2ds\server.cmd
       wine_bin_path: wine
       console_proxy:
         bind:
