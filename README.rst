@@ -3338,11 +3338,11 @@ Primary options
 
 ``wine_bin_path``
     Custom path to `Wine <https://www.winehq.org>`_ executable. Applicable only
-    when running server on Linux or Mac OS.
+    when running server on Linux or macOS.
 
     ..
 
-        **NOTE**: on Mac OS ``wine`` executable can be just a shell script
+        **NOTE**: on macOS ``wine`` executable can be just a shell script
         which wraps invocation of real executable. For example
 
         .. code-block:: bash
@@ -3769,7 +3769,7 @@ interfaces, they must be enabled for server and connections from localhost must
 be allowed. Feel free to do this with
 `config editor <https://il2horusteam.github.io/il2fb-ds-config/>`_.
 
-In case Airbridge is going to be used on Linux or Mac OS,
+In case Airbridge is going to be used on Linux or macOS,
 `Wine <https://www.winehq.org>`_ must be installed, so that dedicated server
 can be run.
 
@@ -3827,9 +3827,9 @@ were already described in this text just to give an extra emphasis on them.
 #. Console and Device Link interfaces must be enabled for dedicated server.
 #. Access to Console and Device Link interfaces should be granted to localhost
    only.
-#. ``wine`` must be installed to run dedicated server on Linux or Mac OS.
+#. ``wine`` must be installed to run dedicated server on Linux or macOS.
 #. Path to ``wine.bin`` must be configured by ``wine_bin_path`` when running on
-   Mac OS.
+   macOS.
 #. Access to HTTP API should be granted only to authorized clients.
 #. If HTTP API is exposed to the outer world if must be secured and run over
    HTTPS.
@@ -3841,8 +3841,19 @@ were already described in this text just to give an extra emphasis on them.
 FAQ
 ===
 
-// TODO:
+#. Does Airbridge impact performance of Dedicated Server?
+       No, Airbridge is a stand-alone process which runs Dedicated Server as a
+       coprocess and does not consume it's resources.
+#. Can Airbridge extend server's functionality or fix its bugs?
+       No, Airbridge just wraps access to existing interfaces and provides
+       unified machine-friendly access to them.
+#. On which operating systems Airbridge can run?
+       Airbridge was tested on Windows (7, 10, Server 2008), Linux and macOS.
 
+       .. image:: ./docs/Runtime.png
+          :alt: Runtime example
+          :align: center
+          :height: 400
 
 .. |pypi_package| image:: http://img.shields.io/pypi/v/il2fb-ds-airbridge.svg?style=flat
    :target: https://pypi.python.org/pypi?name=il2fb-ds-airbridge&:action=display
