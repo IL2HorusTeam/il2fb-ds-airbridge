@@ -3818,10 +3818,24 @@ Example of application's help is given below.
                             path to config file (default: airbridge.yml)
 
 
-Caveats
-=======
+Caveats and recommendations
+===========================
 
-// TODO:
+Current section accumulates information about different potential issues which
+were already described in this text just to give an extra emphasis on them.
+
+#. Console and Device Link interfaces must be enabled for dedicated server.
+#. Access to Console and Device Link interfaces should be granted to localhost
+   only.
+#. ``wine`` must be installed to run dedicated server on Linux or Mac OS.
+#. Path to ``wine.bin`` must be configured by ``wine_bin_path`` when running on
+   Mac OS.
+#. Access to HTTP API should be granted only to authorized clients.
+#. If HTTP API is exposed to the outer world if must be secured and run over
+   HTTPS.
+#. Connection with NATS server must be secured or at least isolated.
+#. Connection with NATS server over TLS is not stable with ``asyncio``
+   implementation currently. VPN can be used instead.
 
 
 FAQ
