@@ -3757,12 +3757,65 @@ possible to setup a VPN for communication with NATS.
 Usage
 =====
 
-// TODO:
+This section describes ways to use Airbridge and preconditions which must be
+satisfied before actual usage.
+
 
 Preconditions
 -------------
 
-// TODO:
+As Airbridge communicates with dedicated server via console and Device Link
+interfaces, they must be enabled for server and connections from localhost must
+be allowed. Feel free to do this with
+`config editor <https://il2horusteam.github.io/il2fb-ds-config/>`_.
+
+In case Airbridge is going to be used on Linux or Mac OS,
+`Wine <https://www.winehq.org>`_ must be installed, so that dedicated server
+can be run.
+
+
+Invocation
+----------
+
+There are a couple of ways to run Airbridge depending on how it was installed.
+
+If it was installed as a Python package, then it can be run as a command-line
+application:
+
+.. code-block:: bash
+
+    il2fb-ds-airbridge
+
+
+If it was installed as a single executable, then it can be run just by
+invoking it:
+
+.. code-block:: bash
+
+    airbridge
+
+On Windows it can be run both from console and as a usual application.
+
+
+Optional parameters
+-------------------
+
+Airbridge accepts optional path to its config file. By default it looks for
+config to be in ``airbridge.yml`` file in *current working directory*.
+
+Example of application's help is given below.
+
+.. code-block::
+
+    il2fb-ds-airbridge -h
+    usage: il2fb-ds-airbridge [-h] [-c CONFIG_PATH]
+
+    Wrapper of dedicated server of «IL-2 Sturmovik: Forgotten Battles»
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -c CONFIG_PATH, --config CONFIG_PATH
+                            path to config file (default: airbridge.yml)
 
 
 Caveats
