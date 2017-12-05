@@ -299,6 +299,7 @@ class RadarStreamingFacility(StreamingFacility):
         refresh_period: float=5,
         **kwargs
     ) -> Awaitable[None]:
+
         with await self._subscribers_lock:
             group = self._subscribers.get(refresh_period)
 
