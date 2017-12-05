@@ -80,7 +80,7 @@ REQUIREMENTS, DEPENDENCIES = parse_requirements(REQUIREMENTS_FILE_PATH)
 
 setup(
     name="il2fb-ds-airbridge",
-    version="1.0.0-rc",
+    version="1.0.0",
     description=(
         "Wrapper of dedicated server of «IL-2 Sturmovik: Forgotten Battles»"
     ),
@@ -110,7 +110,7 @@ setup(
         "Operating System :: Unix",
         "Operating System :: Microsoft :: Windows",
         "License :: OSI Approved :: MIT License",
-        "Development Status :: 4 - Beta",
+        "Development Status :: 5 - Production/Stable",
         "Topic :: Communications",
         "Topic :: Games/Entertainment :: Simulation",
         "Environment :: Console",
