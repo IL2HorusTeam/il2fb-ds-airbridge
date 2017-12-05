@@ -3,8 +3,8 @@
 import asyncio
 import itertools
 import logging
-import threading
 import queue
+import threading
 
 from typing import Awaitable
 
@@ -36,6 +36,7 @@ from il2fb.ds.airbridge.streaming.facilities import NotParsedStringsStreamingFac
 from il2fb.ds.airbridge.streaming.facilities import RadarStreamingFacility
 
 from il2fb.ds.airbridge.streaming.subscribers.loaders import load_subscribers_with_subscription_options
+from il2fb.ds.airbridge.tls import load_tls_context
 from il2fb.ds.airbridge.watch_dog import TextFileWatchDog
 
 
@@ -141,11 +142,30 @@ class Airbridge:
         if not config:
             return
 
-        self.nats_client = NATSClient(loop=self.loop)
-        await self.nats_client.connect(servers=config.servers)
+        await self._start_nats_client(config)
+        await self._maybe_start_nats_streaming_client(config.streaming)
 
-        streaming_config = config.streaming
-        if not streaming_config:
+    async def _start_nats_client(
+        self, config: DotAccessDict,
+    ) -> Awaitable[None]:
+        self.nats_client = NATSClient(loop=self.loop)
+
+        connection_options = dict(
+            servers=config.servers,
+        )
+
+        tls_config = config.tls
+        if tls_config:
+            tls_ctx = load_tls_context(tls_config)
+            connection_options['tls'] = tls_ctx
+
+        await self.nats_client.connect(**connection_options)
+
+    async def _maybe_start_nats_streaming_client(
+        self, config: DotAccessDict,
+    ) -> Awaitable[None]:
+
+        if not config:
             return
 
         self.nats_streaming_client = NATSStreamingClient(
@@ -153,8 +173,8 @@ class Airbridge:
             nats_client=self.nats_client,
         )
         await self.nats_streaming_client.connect(
-            cluster_id=streaming_config.cluster_id,
-            client_id=streaming_config.client_id,
+            cluster_id=config.cluster_id,
+            client_id=config.client_id,
         )
 
     async def _maybe_start_static_streaming_subscribers(self) -> Awaitable[None]:

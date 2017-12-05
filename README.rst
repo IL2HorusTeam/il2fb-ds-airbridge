@@ -3410,6 +3410,10 @@ Full example of configuration:
       streaming:
         cluster_id: your-cluster-id
         client_id: your-client-id
+      tls:
+        private_key_path: /path/to/nats/tls/client.key
+        certificate_path: /path/to/nats/tls/client.crt
+        ca_path: /path/to/nats/tls/ca
 
 
 Description of shown options is given below.
@@ -3434,6 +3438,15 @@ Description of shown options is given below.
     for details.
 
     Required only if NATS streaming is going to be used.
+
+``tls.private_key_path``
+    Path to TLS client private key.
+
+``tls.certificate_path``
+    Path to TLS client certificate.
+
+``tls.ca_path``
+    Path to TLS client certificate CA.
 
 
 API
@@ -3734,18 +3747,13 @@ Securing connection with NATS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 NATS server is expected to be remote in respect to dedicated server. It has its
-own optional authorization mechanisms and it can run over TLS. See
+own optional authorization mechanisms and it can run over TLS. Refer to
 `security documentation for NATS streaming server <https://github.com/nats-io/nats-streaming-server#securing>`_
 and `security documentation for bare NATS server <https://github.com/nats-io/gnatsd#securing-nats>`_.
 
 Enabling TLS for server with requirement for its clients to use TLS and
 enabling validation of clients' certificates would act as a pretty good
-solution. However, there are very tricky issues with TLS connection to NATS
-server. It is probably caused by implementation issues inside
-`asyncio-nats <https://github.com/nats-io/asyncio-nats>`_ client or inside
-`asyncio <https://docs.python.org/3/library/asyncio.html>`_ library, however,
-currently its hard to tell what is the reason of that. As a solution, it's
-possible to setup a VPN for communication with NATS.
+solution.
 
 
 Usage
@@ -3828,9 +3836,7 @@ were already described in this text just to give an extra emphasis on them.
 #. Access to HTTP API should be granted only to authorized clients.
 #. If HTTP API is exposed to the outer world if must be secured and run over
    HTTPS.
-#. Connection with NATS server must be secured or at least isolated.
-#. Connection with NATS server over TLS is not stable with ``asyncio``
-   implementation currently. VPN can be used instead.
+#. Connection with NATS server must be secured with TLS or at least isolated.
 
 
 FAQ

@@ -38,6 +38,10 @@ nats:
   streaming:
     cluster_id: your-cluster-id
     client_id: your-client-id
+  tls:
+    private_key_path: /path/to/nats/tls/client.key
+    certificate_path: /path/to/nats/tls/client.crt
+    ca_path: /path/to/nats/tls/ca
 api:
   nats:
     subject: airbridge-cmd
