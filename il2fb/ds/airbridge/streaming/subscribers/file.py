@@ -1,11 +1,16 @@
 # coding: utf-8
 
+import logging
+
 from pathlib import Path
 from typing import Any, Awaitable
 
 from il2fb.ds.airbridge import json
 from il2fb.ds.airbridge.typing import StringOrPath
 from il2fb.ds.airbridge.streaming.subscribers.base import PluggableStreamingSubscriber
+
+
+LOG = logging.getLogger(__name__)
 
 
 class TextFileStreamingSink(PluggableStreamingSubscriber):
