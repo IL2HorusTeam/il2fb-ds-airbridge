@@ -9,7 +9,7 @@ psutil==5.3.1
 janus==0.3.0
 
 asyncio-nats-client==0.6.0
-asyncio-nats-streaming-client==0.2.1
+asyncio-nats-streaming-client==0.2.2
 
 aiohttp==2.3.2
 aiohttp-cors==0.5.3
