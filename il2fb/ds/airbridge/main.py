@@ -79,10 +79,11 @@ def set_exit_handler(loop: asyncio.AbstractEventLoop, handler) -> None:
     if IS_WINDOWS:
         try:
             import win32api
-            win32api.SetConsoleCtrlHandler(handler, True)
         except ImportError:
             version = ".".join(map(str, sys.version_info[:2]))
             raise Exception(f"pypiwin32 is not installed for Python {version}")
+        else:
+            win32api.SetConsoleCtrlHandler(handler, True)
     else:
         import signal
         loop.add_signal_handler(signal.SIGINT, handler)
