@@ -167,7 +167,6 @@ def run_app(
         error_ack()
     else:
         LOG.info("application stop was requested")
-        error_ack()
     finally:
         console_client.close()
         device_link_client.close()
