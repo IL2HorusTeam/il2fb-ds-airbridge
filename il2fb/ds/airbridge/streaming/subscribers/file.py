@@ -15,16 +15,22 @@ LOG = logging.getLogger(__name__)
 
 class TextFileStreamingSink(PluggableStreamingSubscriber):
 
-    def __init__(self, app, path: StringOrPath):
+    def __init__(self, app, path: StringOrPath, encoding: str='utf-8'):
         super().__init__(app=app)
 
         self._path = path if isinstance(path, Path) else Path(path)
+        self._encoding = encoding
+
         self._stream = None
         self._stat = None
 
     def plug_in(self) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._stream = self._path.open('a', buffering=1)
+        self._stream = self._path.open(
+            mode='a',
+            buffering=1,  # line buffering
+            encoding=self._encoding,
+        )
         self._stat = self._path.lstat()
 
     async def write(self, s: str) -> Awaitable[None]:

@@ -236,6 +236,9 @@ CONFIG_SCHEMA = {
                                                 'path': {
                                                     'type': 'string',
                                                 },
+                                                'encoding': {
+                                                    'type': 'string',
+                                                },
                                             },
                                             'required': ['path', ],
                                         },
@@ -280,6 +283,9 @@ CONFIG_SCHEMA = {
                                                 'path': {
                                                     'type': 'string',
                                                 },
+                                                'encoding': {
+                                                    'type': 'string',
+                                                },
                                             },
                                             'required': ['path', ],
                                         },
@@ -322,6 +328,9 @@ CONFIG_SCHEMA = {
                                             'type': 'object',
                                             'properties': {
                                                 'path': {
+                                                    'type': 'string',
+                                                },
+                                                'encoding': {
                                                     'type': 'string',
                                                 },
                                             },
@@ -369,6 +378,9 @@ CONFIG_SCHEMA = {
                                             'type': 'object',
                                             'properties': {
                                                 'path': {
+                                                    'type': 'string',
+                                                },
+                                                'encoding': {
                                                     'type': 'string',
                                                 },
                                             },
