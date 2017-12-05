@@ -129,3 +129,7 @@ class NATSStreamingClient(StreamClient):
             verbose=verbose,
             **options
         )
+        LOG.info(
+            f"nats streaming connection was established "
+            f"(cluster_id='{cluster_id}', client_id='{client_id}')"
+        )
