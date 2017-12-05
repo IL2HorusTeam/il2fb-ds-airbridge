@@ -44,6 +44,7 @@ class NATSClient(Client):
         max_outstanding_pings: int=DEFAULT_MAX_OUTSTANDING_PINGS,
         dont_randomize: bool=False,
         flusher_queue_size: int=DEFAULT_MAX_FLUSHER_QUEUE_SIZE,
+        **options
     ) -> Awaitable[None]:
 
         await super().connect(
@@ -65,6 +66,8 @@ class NATSClient(Client):
 
             disconnected_cb=self._handle_disconnection,
             reconnected_cb=self._handle_reconnection,
+
+            **options
         )
         LOG.info(
             f"nats connection was established "
