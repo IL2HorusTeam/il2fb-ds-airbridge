@@ -16,7 +16,6 @@ logging:
   trace: no
   encoding: utf8
   use_local_time: no
-daemon: no
 state:
   file_path: /var/run/il2ds/airbridge.state
 ds:
@@ -32,6 +31,7 @@ ds:
     bind:
       address: localhost
       port: 10001
+  is_interactive: yes
 nats:
   servers:
     - nats://your.domain:4222

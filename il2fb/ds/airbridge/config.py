@@ -74,9 +74,6 @@ CONFIG_SCHEMA = {
                 },
             },
         },
-        'daemon': {
-            'type': 'boolean',
-        },
         'state': {
             'type': 'object',
             'properties': {
@@ -136,6 +133,9 @@ CONFIG_SCHEMA = {
                         },
                     },
                     'required': ['bind', ],
+                },
+                'is_interactive': {
+                    'type': 'boolean',
                 },
             },
             'required': ['exe_path', ],
@@ -457,7 +457,6 @@ CONFIG_DEFAULTS = {
             'use_local_time': False,
         },
     },
-    'daemon': False,
     'state': {
         'file_path': 'airbridge.state',
     },

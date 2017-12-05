@@ -176,7 +176,6 @@ def run_app(
             device_link_client.wait_closed(),
             loop=loop,
         ))
-
         loop.run_until_complete(app.stop())
 
 
@@ -193,23 +192,19 @@ def run_main(config: ServerConfig, state: DotAccessDict, trace: bool) -> None:
 
     LOG.info("init dedicated server")
 
-    ds_options = dict(
-        loop=main_loop,
-        exe_path=config.ds.exe_path,
-        config_path=config.ds.get('config_path'),
-        start_script_path=config.ds.get('start_script_path'),
-        wine_bin_path=config.ds.get('wine_bin_path'),
-    )
-
-    if not config.daemon:
-        terminal = Terminal()
-
-        ds_options['stdout_handler'] = terminal.handle_stdout
-        ds_options['stderr_handler'] = terminal.handle_stderr
-        ds_options['prompt_handler'] = terminal.handle_prompt
+    terminal = Terminal()
 
     try:
-        ds = DedicatedServer(**ds_options)
+        ds = DedicatedServer(
+            loop=main_loop,
+            exe_path=config.ds.exe_path,
+            config_path=config.ds.get('config_path'),
+            start_script_path=config.ds.get('start_script_path'),
+            wine_bin_path=config.ds.get('wine_bin_path'),
+            stdout_handler=terminal.handle_stdout,
+            stderr_handler=terminal.handle_stderr,
+            prompt_handler=terminal.handle_prompt,
+        )
     except Exception:
         LOG.fatal("failed to init dedicated server", exc_info=True)
         abort()
@@ -275,12 +270,12 @@ def run_main(config: ServerConfig, state: DotAccessDict, trace: bool) -> None:
     app_start_event.wait()
 
     LOG.info("set exit handler")
-
     exit_handler = functools.partial(main_loop.create_task, ds.ask_exit())
     exit_handler = wrap_exit_handler(main_thread, exit_handler)
     set_exit_handler(main_loop, exit_handler)
 
-    if not config.daemon:
+    is_interactive = config.ds.get('is_interactive', True)
+    if is_interactive:
         LOG.info("start input handler")
         stdin_handler = make_thread_safe_string_handler(main_loop, ds.input)
         terminal.listen_stdin(handler=stdin_handler)

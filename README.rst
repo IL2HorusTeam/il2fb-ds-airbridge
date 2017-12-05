@@ -3246,31 +3246,6 @@ Other available logging options are listed below.
     Tells whether local timezone or UTC should be used in log messages.
 
 
-Daemonization
--------------
-
-By default Airbridge connects its terminal channels (STDIN, STDOUT and STDERR)
-to terminal channels channels of dedicated server as it is shown in
-"Architecture Overview" section. Such approach allows Airbridge to sit in the
-middle of user-server communication and filter data.
-
-If application is going to be run as a background service or inside a
-virtualization container like Docker and interactive communication with server
-is not needed then it can be turned off by setting ``daemon`` option to ``yes``
-value.
-
-``daemon``
-    Tells whether Airbridge will be running without ability of user to interact
-    with server via its shell: no input prompt and no output.
-
-
-Example of config with default value:
-
-.. code-block:: yaml
-
-    daemon: no
-
-
 State persistence
 -----------------
 
@@ -3317,13 +3292,14 @@ Default configuration looks as following:
         bind:
           address: localhost
           port: 10001
+      is_interactive: yes
 
 
 Description of options is given below.
 
 
-Primary options
-~~~~~~~~~~~~~~~
+Execution options
+~~~~~~~~~~~~~~~~~
 
 ``exe_path``
     Path to ``il2server.exe`` executable file.
@@ -3395,6 +3371,24 @@ By default Device Link proxy is turned off.
 
 ``device_link_proxy.bind.port``
     Port for Device Link proxy to listen for incoming connections on.
+
+
+Interactivity
+~~~~~~~~~~~~~
+
+By default Airbridge connects its terminal channels (STDIN, STDOUT and STDERR)
+to terminal channels channels of dedicated server as it is shown in
+"Architecture Overview" section. Such approach allows Airbridge to sit in the
+middle of user-to-server communication and filter data.
+
+If application is going to be run as a background service or inside a
+virtualization container like Docker and interactive communication with server
+is not needed then it can be turned off by setting ``is_interactive`` option to
+``no`` value.
+
+``is_interactive``
+    Tells whether Airbridge will be running with ability of user to interact
+    with server via its shell.
 
 
 NATS
