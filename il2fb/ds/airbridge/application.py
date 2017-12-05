@@ -383,11 +383,13 @@ class Airbridge:
         await asyncio.gather(*awaitables, loop=self.loop)
 
     async def _maybe_stop_nats_clients(self) -> Awaitable[None]:
-        if not self.nats_client or self.nats_client.is_closed:
+        if not self.nats_client:
             return
 
         if self.nats_streaming_client:
             await self.nats_streaming_client.close()
 
-        await self.nats_client.flush()
+        if self.nats_client.is_connected:
+            await self.nats_client.flush()
+
         await self.nats_client.close()
