@@ -408,10 +408,10 @@ class RadarStreamingFacility(StreamingFacility):
                     f"streaming facility '{self._name}': refresh task "
                     f"was cancelled"
                 )
-            except ConnectionAbortedError:
+            except ConnectionError:
                 LOG.debug(
-                    f"streaming facility '{self._name}': connection with radar"
-                    f"was lost"
+                    f"streaming facility '{self._name}': connection with "
+                    "radar was lost"
                 )
                 break
             finally:
