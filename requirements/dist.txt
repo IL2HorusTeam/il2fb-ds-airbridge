@@ -5,7 +5,7 @@ PyYAML==3.12
 yarl==0.14.0
 
 colorama==0.3.9
-psutil==5.3.1
+psutil==5.6.6
 janus==0.3.0
 
 asyncio-nats-client==0.6.4
