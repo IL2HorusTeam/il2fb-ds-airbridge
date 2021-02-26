@@ -11,7 +11,7 @@ janus==0.3.0
 asyncio-nats-client==0.6.4
 asyncio-nats-streaming-client==0.2.2
 
-aiohttp==2.3.2
+aiohttp==3.7.4
 aiohttp-cors==0.5.3
 
 il2fb-commons>=1.0.1,<1.1
